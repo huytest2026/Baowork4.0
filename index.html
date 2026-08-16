@@ -151,7 +151,7 @@
         </div>
     </form>
 
-    <h3>Bản đồ hiển thị các điểm cập nhật (Click map để điều chỉnh tọa độ)</h3>
+    <h3>Bản đồ hiển thị các điểm cập nhật (Click map hoặc kéo thả Pin để điều chỉnh tọa độ)</h3>
     <div id="map"></div>
 
     <h3>Danh sách số liệu</h3>
@@ -177,6 +177,8 @@
     let map;
     let markersLayer;
     let currentMarker = null;
+    let liveLocationMarker = null;
+    let accuracyCircle = null;
 
     window.onload = function() {
         document.getElementById('thoiGian').valueAsDate = new Date();
@@ -192,21 +194,57 @@
         }).addTo(map);
         markersLayer = L.layerGroup().addTo(map);
 
-        // Lấy vị trí GPS hiện tại mặc định khi mở trang
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    const lat = position.coords.latitude.toFixed(6);
-                    const lng = position.coords.longitude.toFixed(6);
-                    document.getElementById('layToaDo').value = `${lat},${lng}`;
-                    setPinOnMap(lat, lng);
-                },
-                () => {},
-                { enableHighAccuracy: true }
-            );
-        }
+        // Sự kiện khi bản đồ tìm thấy vị trí thực tế qua GPS (Live Tracking)
+        map.on('locationfound', function(e) {
+            const lat = e.latlng.lat.toFixed(6);
+            const lng = e.latlng.lng.toFixed(6);
+            const radius = e.accuracy / 2;
 
-        // Click trên bản đồ để chọn/điều chỉnh tọa độ chính xác
+            document.getElementById('layToaDo').value = `${lat},${lng}`;
+
+            // Hiển thị chấm xanh dương biểu thị vị trí GPS hiện tại đang di chuyển
+            if (!liveLocationMarker) {
+                liveLocationMarker = L.circleMarker(e.latlng, {
+                    radius: 8,
+                    fillColor: '#007bff',
+                    color: '#fff',
+                    weight: 2,
+                    opacity: 1,
+                    fillOpacity: 0.9
+                }).addTo(map).bindPopup("Vị trí GPS thực tế của bạn");
+
+                accuracyCircle = L.circle(e.latlng, radius, {
+                    color: '#007bff',
+                    fillColor: '#007bff',
+                    fillOpacity: 0.15,
+                    weight: 1
+                }).addTo(map);
+            } else {
+                liveLocationMarker.setLatLng(e.latlng);
+                accuracyCircle.setLatLng(e.latlng);
+                accuracyCircle.setRadius(radius);
+            }
+
+            // Tạo hoặc cập nhật Pin điều chỉnh tọa độ (có thể kéo thả)
+            if (!currentMarker) {
+                currentMarker = L.marker(e.latlng, { draggable: true }).addTo(map)
+                    .bindPopup("Pin điều chỉnh tọa độ (Kéo thả để chọn chính xác)").openPopup();
+                
+                currentMarker.on('dragend', function(event) {
+                    const pos = event.target.getLatLng();
+                    document.getElementById('layToaDo').value = `${pos.lat.toFixed(6)},${pos.lng.toFixed(6)}`;
+                });
+            } else if (!currentMarker.isDragging()) {
+                // Nếu chưa thao tác kéo thả thủ công, cập nhật pin theo vị trí GPS mới
+                currentMarker.setLatLng(e.latlng);
+            }
+        });
+
+        map.on('locationerror', function(e) {
+            alert("Không thể lấy vị trí GPS: " + e.message);
+        });
+
+        // Click trên bản đồ để chỉnh sửa vị trí ghim thủ công
         map.on('click', function(e) {
             const lat = e.latlng.lat.toFixed(6);
             const lng = e.latlng.lng.toFixed(6);
@@ -228,17 +266,15 @@
         map.setView([lat, lng], map.getZoom());
     }
 
+    // Kích hoạt theo dõi vị trí liên tục thời gian thực (Live Tracking & Watch)
     function getLocation() {
         if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    const lat = position.coords.latitude.toFixed(6);
-                    const lng = position.coords.longitude.toFixed(6);
-                    document.getElementById('layToaDo').value = `${lat},${lng}`;
-                    setPinOnMap(lat, lng);
-                },
-                () => alert('Không thể lấy tọa độ GPS.')
-            );
+            map.locate({
+                setView: true,
+                maxZoom: 18,
+                watch: true, // Theo dõi liên tục khi di chuyển
+                enableHighAccuracy: true
+            });
         } else {
             alert('Trình duyệt không hỗ trợ GPS.');
         }
@@ -246,7 +282,7 @@
 
     // Hàm quy định màu sắc marker theo tuyến cáp
     function getMarkerColor(tuyen) {
-        if (!tuyen) return '#0d6efd'; // Mặc định xanh dương
+        if (!tuyen) return '#0d6efd';
         const t = tuyen.toUpperCase();
         if (t.includes('24FO')) return '#198754'; // Xanh lá
         if (t.includes('96FO')) return '#fd7e14'; // Cam
@@ -301,7 +337,6 @@
                         const color = getMarkerColor(row.tuyenCap);
                         const labelText = `${row.tuyenCap || ''} - ${row.doiTuong || 'MX'}/${row.taiKm || ''}`;
                         
-                        // Sử dụng CircleMarker để hiển thị chuẩn xác theo màu sắc yêu cầu
                         L.circleMarker([lat, lng], {
                             radius: 8,
                             fillColor: color,
