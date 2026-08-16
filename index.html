@@ -20,6 +20,7 @@
         .btn-group { display: flex; gap: 10px; margin-bottom: 20px; }
         button.main-btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; color: #fff; font-weight: bold; }
         .btn-add { background-color: var(--success-color); }
+        .camera-box { display: flex; align-items: center; gap: 10px; }
         #map { height: 450px; width: 100%; border-radius: 8px; border: 1px solid #ced4da; margin-bottom: 30px; }
         table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
         th, td { border: 1px solid #dee2e6; padding: 8px; text-align: left; white-space: nowrap; }
@@ -32,21 +33,25 @@
     <h2>QUẢN LÝ SỐ HÓA TUYẾN CÁP</h2>
     <form id="cableForm">
         <div class="form-grid">
+            <!-- 1. Trạm quản lý -->
             <div class="form-group">
-                <label>Trạm quản lý</label>
-                <select id="tramQuanLy" onchange="filterLibrary()"></select>
+                <label>1. Trạm quản lý</label>
+                <select id="tramQuanLy" onchange="updateLinkDropdown()"></select>
             </div>
+            <!-- 2. Link -->
             <div class="form-group">
-                <label>Tên tuyến quy định</label>
-                <select id="tenTuyenQuyDinh" onchange="updateDetailsFromTenTuyen()"></select>
+                <label>2. Link</label>
+                <select id="link" onchange="updateTuyenDropdown()"></select>
             </div>
+            <!-- 3. Tuyến cáp -->
             <div class="form-group">
-                <label>Link</label>
-                <select id="link" onchange="updateDetails()"></select>
-            </div>
-            <div class="form-group">
-                <label>Tuyến cáp</label>
+                <label>3. Tuyến cáp</label>
                 <select id="tuyenCap" onchange="updateDetails()"></select>
+            </div>
+            <!-- 4. Tên tuyến quy định -->
+            <div class="form-group">
+                <label>4. Tên tuyến quy định</label>
+                <input type="text" id="tenTuyenQuyDinh" readonly style="background-color: #e9ecef;">
             </div>
             <div class="form-group">
                 <label>Chiều dài Link (Km)</label>
@@ -102,9 +107,14 @@
                 <label>M</label>
                 <input type="number" id="m" placeholder="230" oninput="calculateTaiKm()">
             </div>
+            <!-- Chụp ảnh trực tiếp bằng camera -->
             <div class="form-group">
                 <label>Chụp ảnh</label>
-                <input type="file" id="chupAnh" accept="image/*" capture="environment">
+                <div class="camera-box">
+                    <input type="file" id="chupAnh" accept="image/*" capture="environment" style="display:none;" onchange="previewImage(this)">
+                    <button type="button" onclick="document.getElementById('chupAnh').click()" style="padding: 8px 15px; background: #6c757d; color: #fff; border: none; border-radius: 4px; cursor: pointer;">📷 Mở Camera chụp</button>
+                    <span id="imgStatus" style="font-size: 12px; color: #666;">Chưa có ảnh</span>
+                </div>
             </div>
             <div class="form-group">
                 <label>Tại Km (Tự động)</label>
@@ -133,7 +143,7 @@
         <table id="dataTable">
             <thead>
                 <tr>
-                    <th>STT</th><th>Trạm quản lý</th><th>Tên tuyến quy định</th><th>Link</th><th>Tuyến cáp</th><th>Chiều dài Link</th><th>Đối tượng</th><th>Phương thức thi công</th><th>OTDR->MX</th><th>Độ sâu/Cao</th><th>Lấy tọa độ</th><th>Thời gian</th><th>Chiều từ</th><th>Diễn giải</th><th>Km</th><th>M</th><th>Chụp ảnh</th><th>Tại Km</th><th>Tuyến đường</th><th>Cách mép đường(m)</th>
+                    <th>Trạm quản lý</th><th>Tên tuyến quy định</th><th>Link</th><th>Tuyến cáp</th><th>Chiều dài Link</th><th>Đối tượng</th><th>Phương thức thi công</th><th>OTDR->MX</th><th>Độ sâu/Cao</th><th>Lấy tọa độ</th><th>Thời gian</th><th>Chiều từ</th><th>Diễn giải</th><th>Km</th><th>M</th><th>Chụp ảnh</th><th>Tại Km</th><th>Tuyến đường</th><th>Cách mép đường(m)</th>
                 </tr>
             </thead>
             <tbody id="tableBody"></tbody>
@@ -144,13 +154,15 @@
 <!-- Thư viện bản đồ Leaflet JS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-    // Dữ liệu thư viện mô phỏng (Bạn có thể liên thông trực tiếp từ sheet LIBRARY)
+    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwnSMSXVWjJz3kSIjakz-uhZpk63SubmgOpTEiLZMQn-uXwkOmS1Z7ZrAN8mGYUjHWx0w/exec";
+
+    // Thư viện mẫu liên thông cascading
     const libraryData = [
-        { tram: "HUE", tuyen: "24FO", link: "HUE-DNG", tenTuyen: "24FO HUE-ĐNG.01", chieuDai: 90 },
-        { tram: "HUE", tuyen: "96FO", link: "HUE-DNG", tenTuyen: "96FO HUE-ĐNG.01", chieuDai: 89.7 },
-        { tram: "HUE", tuyen: "48FO", link: "HUE-DNG", tenTuyen: "48FO HUE-ĐNG.01", chieuDai: 80.8 },
-        { tram: "HUE", tuyen: "8FO", link: "HUE-DNG", tenTuyen: "08FO HUE-ĐNG.01", chieuDai: 88.7 },
-        { tram: "ALI", tuyen: "24FO", link: "ALI-HIN", tenTuyen: "24FO ALI-HIEN.01", chieuDai: 120.3 }
+        { tram: "HUE", link: "HUE-DNG", tuyen: "24FO", tenTuyen: "24FO HUE-ĐNG.01", chieuDai: 90 },
+        { tram: "HUE", link: "HUE-DNG", tuyen: "96FO", tenTuyen: "96FO HUE-ĐNG.01", chieuDai: 89.7 },
+        { tram: "HUE", link: "HUE-DNG", tuyen: "48FO", tenTuyen: "48FO HUE-ĐNG.01", chieuDai: 80.8 },
+        { tram: "HUE", link: "HUE-DNG", tuyen: "8FO", tenTuyen: "08FO HUE-ĐNG.01", chieuDai: 88.7 },
+        { tram: "ALI", link: "ALI-HIN", tuyen: "24FO", tenTuyen: "24FO ALI-HIEN.01", chieuDai: 120.3 }
     ];
 
     let map;
@@ -160,17 +172,16 @@
         document.getElementById('thoiGian').valueAsDate = new Date();
         initDropdowns();
         initMap();
+        loadDataFromSheet();
     };
 
     function initMap() {
-        // Khởi tạo bản đồ tâm tại Huế
         map = L.map('map').setView([16.4637, 107.5909], 11);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             maxZoom: 19,
             attribution: '© OpenStreetMap'
         }).addTo(map);
         markersLayer = L.layerGroup().addTo(map);
-        loadMarkersOnMap();
     }
 
     function initDropdowns() {
@@ -180,25 +191,25 @@
         tramSet.forEach(tram => {
             tramSelect.innerHTML += `<option value="${tram}">${tram}</option>`;
         });
-        filterLibrary();
+        updateLinkDropdown();
     }
 
-    function filterLibrary() {
-        const selectedTram = document.getElementById('tramQuanLy').value;
-        const filtered = libraryData.filter(item => item.tram === selectedTram);
-
-        const tenTuyenSelect = document.getElementById('tenTuyenQuyDinh');
+    function updateLinkDropdown() {
+        const tram = document.getElementById('tramQuanLy').value;
+        const links = [...new Set(libraryData.filter(i => i.tram === tram).map(i => i.link))];
         const linkSelect = document.getElementById('link');
-        const tuyenSelect = document.getElementById('tuyenCap');
-
-        tenTuyenSelect.innerHTML = '';
         linkSelect.innerHTML = '';
+        links.forEach(l => linkSelect.innerHTML += `<option value="${l}">${l}</option>`);
+        updateTuyenDropdown();
+    }
+
+    function updateTuyenDropdown() {
+        const tram = document.getElementById('tramQuanLy').value;
+        const link = document.getElementById('link').value;
+        const tuyens = libraryData.filter(i => i.tram === tram && i.link === link);
+        const tuyenSelect = document.getElementById('tuyenCap');
         tuyenSelect.innerHTML = '';
-
-        [...new Set(filtered.map(i => i.tenTuyen))].forEach(tt => tenTuyenSelect.innerHTML += `<option value="${tt}">${tt}</option>`);
-        [...new Set(filtered.map(i => i.link))].forEach(l => linkSelect.innerHTML += `<option value="${l}">${l}</option>`);
-        [...new Set(filtered.map(i => i.tuyen))].forEach(t => tuyenSelect.innerHTML += `<option value="${t}">${t}</option>`);
-
+        tuyens.forEach(t => tuyenSelect.innerHTML += `<option value="${t.tuyen}">${t.tuyen}</option>`);
         updateDetails();
     }
 
@@ -209,19 +220,18 @@
 
         const found = libraryData.find(item => item.tram === tram && item.link === link && item.tuyen === tuyen);
         if (found) {
-            document.getElementById('chieuDaiLink').value = found.chieuDai;
             document.getElementById('tenTuyenQuyDinh').value = found.tenTuyen;
+            document.getElementById('chieuDaiLink').value = found.chieuDai;
+        } else {
+            document.getElementById('tenTuyenQuyDinh').value = '';
+            document.getElementById('chieuDaiLink').value = '';
         }
     }
 
-    function updateDetailsFromTenTuyen() {
-        const tenTuyen = document.getElementById('tenTuyenQuyDinh').value;
-        const found = libraryData.find(item => item.tenTuyen === tenTuyen);
-        if (found) {
-            document.getElementById('tramQuanLy').value = found.tram;
-            document.getElementById('link').value = found.link;
-            document.getElementById('tuyenCap').value = found.tuyen;
-            document.getElementById('chieuDaiLink').value = found.chieuDai;
+    function previewImage(input) {
+        if (input.files && input.files[0]) {
+            document.getElementById('imgStatus').innerText = "Đã chụp: " + input.files[0].name;
+            document.getElementById('imgStatus').style.color = "green";
         }
     }
 
@@ -231,43 +241,13 @@
                 (position) => {
                     const lat = position.coords.latitude.toFixed(6);
                     const lng = position.coords.longitude.toFixed(6);
-                    const coords = `${lat},${lng}`;
-                    document.getElementById('layToaDo').value = coords;
-                    
-                    // Thêm trực tiếp điểm vừa lấy lên bản đồ xem thử
-                    addTempMarker(lat, lng);
+                    document.getElementById('layToaDo').value = `${lat},${lng}`;
                 },
                 () => alert('Không thể lấy tọa độ GPS.')
             );
         } else {
             alert('Trình duyệt không hỗ trợ GPS.');
         }
-    }
-
-    function addTempMarker(lat, lng) {
-        const doiTuong = document.getElementById('doiTuong').value || 'MX';
-        const taiKm = document.getElementById('taiKm').value || 'Km 0+000';
-        const labelText = `${doiTuong}/${taiKm}`;
-
-        L.marker([lat, lng]).addTo(markersLayer)
-          .bindPopup(`<b>${labelText}</b>`)
-          .openPopup();
-        map.setView([lat, lng], 15);
-    }
-
-    function loadMarkersOnMap() {
-        // Mẫu hiển thị sẵn các điểm trên bản đồ với định dạng [Đối tượng]/[Tại Km]
-        const samplePoints = [
-            { lat: 16.4802, lng: 107.6233, label: "MX/Km 876+230" },
-            { lat: 16.4832, lng: 107.7233, label: "MX/Km 876+800" },
-            { lat: 16.3200, lng: 107.8100, label: "BC/Km 882+200" }
-        ];
-
-        samplePoints.forEach(p => {
-            L.marker([p.lat, p.lng]).addTo(markersLayer)
-             .bindTooltip(p.label, { permanent: true, direction: 'top', className: 'map-label' })
-             .bindPopup(`<b>${p.label}</b>`);
-        });
     }
 
     function calculateTaiKm() {
@@ -280,7 +260,57 @@
         }
     }
 
-    const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwnSMSXVWjJz3kSIjakz-uhZpk63SubmgOpTEiLZMQn-uXwkOmS1Z7ZrAN8mGYUjHWx0w/exec";
+    // Tải dữ liệu từ Google Sheets lên Bảng và Bản đồ
+    async function loadDataFromSheet() {
+        try {
+            const response = await fetch(GOOGLE_SCRIPT_URL);
+            const data = await response.json();
+            
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+            markersLayer.clearLayers();
+
+            data.forEach(row => {
+                // 1. Thêm vào bảng
+                tbody.innerHTML += `<tr>
+                    <td>${row.tramQuanLy || ''}</td>
+                    <td>${row.tenTuyenQuyDinh || ''}</td>
+                    <td>${row.link || ''}</td>
+                    <td>${row.tuyenCap || ''}</td>
+                    <td>${row.chieuDaiLink || ''}</td>
+                    <td>${row.doiTuong || ''}</td>
+                    <td>${row.phuongThucThiCong || ''}</td>
+                    <td>${row.otdrMx || ''}</td>
+                    <td>${row.doSau || ''}</td>
+                    <td>${row.layToaDo || ''}</td>
+                    <td>${row.thoiGian || ''}</td>
+                    <td>${row.chieuTu || ''}</td>
+                    <td>${row.dienGiai || ''}</td>
+                    <td>${row.km || ''}</td>
+                    <td>${row.m || ''}</td>
+                    <td>${row.chupAnh || ''}</td>
+                    <td>${row.taiKm || ''}</td>
+                    <td>${row.tuyenDuong || ''}</td>
+                    <td>${row.cachMepDuong || ''}</td>
+                </tr>`;
+
+                // 2. Hiển thị lên bản đồ dạng [Đối tượng]/[Tại Km]
+                if (row.layToaDo && row.layToaDo.includes(',')) {
+                    const parts = row.layToaDo.split(',');
+                    const lat = parseFloat(parts[0]);
+                    const lng = parseFloat(parts[1]);
+                    if (!isNaN(lat) && !isNaN(lng)) {
+                        const labelText = `${row.doiTuong || 'MX'}/${row.taiKm || 'Km 0+000'}`;
+                        L.marker([lat, lng]).addTo(markersLayer)
+                         .bindTooltip(labelText, { permanent: true, direction: 'top' })
+                         .bindPopup(`<b>${labelText}</b><br>Diễn giải: ${row.dienGiai || ''}`);
+                    }
+                }
+            });
+        } catch (e) {
+            console.log("Chưa tải được dữ liệu từ Google Sheets: ", e);
+        }
+    }
 
     async function addRecord() {
         const fileInput = document.getElementById('chupAnh');
@@ -319,7 +349,7 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
             });
-            alert('Đã gửi dữ liệu lên Google Sheets thành công!');
+            alert('Đã thêm số liệu thành công!');
             location.reload();
         } catch (error) {
             alert('Lỗi: ' + error);
