@@ -146,7 +146,7 @@
                 <input type="number" step="0.1" id="cachMepDuong" placeholder="2">
             </div>
             
-            <!-- CÁC TRƯỜNG CÓ ĐIỀU KIỆN HIỂN THỊ (Mặc định chọn "Số hóa cáp quang") -->
+            <!-- LÝ DO CẬP NHẬT & TRƯỜNG PHÁT SINH -->
             <div class="form-group">
                 <label>Lý do cập nhật</label>
                 <select id="lyDoCapNhat" onchange="toggleIncidentFields()">
@@ -190,6 +190,14 @@
                 <label>Tuyến cáp tra cứu</label>
                 <select id="searchTuyenCap">
                     <option value="">-- Tất cả Tuyến cáp --</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Lý do tra cứu</label>
+                <select id="searchLyDo">
+                    <option value="Sự cố cáp quang" selected>Sự cố cáp quang</option>
+                    <option value="Số hóa cáp quang">Số hóa cáp quang</option>
+                    <option value="">-- Tất cả lý do --</option>
                 </select>
             </div>
             <div class="form-group">
@@ -238,7 +246,7 @@
         document.getElementById('thoiGian').valueAsDate = new Date();
         initMap();
         loadDataFromSheet();
-        toggleIncidentFields(); // Kiểm tra trạng thái hiển thị ban đầu
+        toggleIncidentFields();
     };
 
     function toggleIncidentFields() {
@@ -492,6 +500,7 @@
     function searchClosestPoints() {
         const searchLink = document.getElementById('searchLink').value;
         const searchTuyen = document.getElementById('searchTuyenCap').value;
+        const searchLyDo = document.getElementById('searchLyDo').value;
         const targetOtdr = parseFloat(document.getElementById('searchOtdr').value);
 
         if (isNaN(targetOtdr)) {
@@ -502,8 +511,9 @@
         let filtered = allRecordsData.filter(row => {
             let matchLink = !searchLink || row.link === searchLink;
             let matchTuyen = !searchTuyen || row.tuyenCap === searchTuyen;
+            let matchLyDo = !searchLyDo || row.lyDoCapNhat === searchLyDo;
             let hasOtdr = row.otdrMx !== "" && !isNaN(parseFloat(row.otdrMx));
-            return matchLink && matchTuyen && hasOtdr;
+            return matchLink && matchTuyen && matchLyDo && hasOtdr;
         });
 
         if (filtered.length === 0) {
@@ -542,6 +552,7 @@
     function resetSearch() {
         document.getElementById('searchLink').value = "";
         document.getElementById('searchTuyenCap').value = "";
+        document.getElementById('searchLyDo').value = "Sự cố cáp quang";
         document.getElementById('searchOtdr').value = "";
         updateSearchTuyenDropdown();
         renderTableAndMap(allRecordsData);
