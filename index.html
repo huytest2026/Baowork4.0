@@ -231,18 +231,28 @@
                     .bindPopup("Pin điều chỉnh tọa độ (Kéo thả để chọn chính xác)").openPopup();
                 
                 currentMarker.on('dragend', function(event) {
-                    const pos = event.target.getLatLng();
-                    document.getElementById('layToaDo').value = `${pos.lat.toFixed(6)},${pos.lng.toFixed(6)}`;
-                });
-            } else if (!currentMarker.isDragging()) {
-                // Nếu chưa thao tác kéo thả thủ công, cập nhật pin theo vị trí GPS mới
-                currentMarker.setLatLng(e.latlng);
-            }
-        });
+                const pos = event.target.getLatLng();
+                document.getElementById('layToaDo').value = `${pos.lat.toFixed(6)},${pos.lng.toFixed(6)}`;
+            });
+        } else if (!currentMarker.isDragging()) {
+            currentMarker.setLatLng(e.latlng);
+        }
+    });
 
-        map.on('locationerror', function(e) {
-            alert("Không thể lấy vị trí GPS: " + e.message);
-        });
+    map.on('locationerror', function(e) {
+        console.log("Không thể lấy vị trí GPS tự động: " + e.message);
+    });
+
+    map.on('click', function(e) {
+        const lat = e.latlng.lat.toFixed(6);
+        const lng = e.latlng.lng.toFixed(6);
+        document.getElementById('layToaDue').value = `${lat},${lng}`;
+        setPinOnMap(lat, lng);
+    });
+
+    // 🚀 TỰ ĐỘNG GỌI GPS NGAY KHI VỪA TẢI XONG BẢN ĐỒ
+    getLocation();
+}
 
         // Click trên bản đồ để chỉnh sửa vị trí ghim thủ công
         map.on('click', function(e) {
