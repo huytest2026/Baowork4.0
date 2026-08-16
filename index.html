@@ -3,52 +3,53 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quản lý số hóa tuyến cáp</title>
+    <title>Quản lý số hóa và sự cố tuyến cáp</title>
     <!-- Thư viện bản đồ Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        :root { --success-color: #198754; --warning-color: #ffc107; }
+        :root { --success-color: #198754; --warning-color: #ffc107; --primary-color: #0d6efd; }
         body { font-family: Arial, sans-serif; background-color: #f8f9fa; padding: 20px; }
         .container { max-width: 1400px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        h2, h3 { color: #333; border-bottom: 2px solid #ffc107; padding-bottom: 8px; margin-top: 20px; }
         .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px; }
         .form-group { display: flex; flex-direction: column; }
         .form-group label { font-weight: bold; margin-bottom: 5px; font-size: 13px; }
         .form-group input, .form-group select { padding: 8px; border: 1px solid #ced4da; border-radius: 4px; font-size: 14px; }
         .input-with-btn { display: flex; gap: 5px; }
         .input-with-btn input { flex: 1; }
-        .input-with-btn button { padding: 0 10px; background-color: #0d6efd; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; }
+        .input-with-btn button { padding: 0 10px; background-color: var(--primary-color); color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; }
         .btn-group { display: flex; gap: 10px; margin-bottom: 20px; }
         button.main-btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; color: #fff; font-weight: bold; }
         .btn-add { background-color: var(--success-color); }
+        .btn-search { background-color: var(--primary-color); }
         .camera-box { display: flex; align-items: center; gap: 10px; }
         #map { height: 450px; width: 100%; border-radius: 8px; border: 1px solid #ced4da; margin-bottom: 30px; }
         table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
         th, td { border: 1px solid #dee2e6; padding: 8px; text-align: left; white-space: nowrap; }
-        th { background-color: #ffc107; }
+        th { background-color: #ffc107; color: #000; }
+        .search-section { background: #f1f3f5; padding: 15px; border-radius: 6px; margin-bottom: 25px; border: 1px solid #dee2e6; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <h2>QUẢN LÝ SỐ HÓA VÀ SỰ CỐ TUYẾN CÁP</h2>
+    
+    <!-- FORM NHẬP LIỆU -->
     <form id="cableForm">
         <div class="form-grid">
-            <!-- 1. Trạm quản lý -->
             <div class="form-group">
                 <label>1. Trạm quản lý</label>
                 <select id="tramQuanLy" onchange="updateLinkDropdown()"></select>
             </div>
-            <!-- 2. Link -->
             <div class="form-group">
                 <label>2. Link</label>
                 <select id="link" onchange="updateTuyenDropdown()"></select>
             </div>
-            <!-- 3. Tuyến cáp -->
             <div class="form-group">
                 <label>3. Tuyến cáp</label>
                 <select id="tuyenCap" onchange="updateDetails()"></select>
             </div>
-            <!-- 4. Tên tuyến quy định -->
             <div class="form-group">
                 <label>4. Tên tuyến quy định</label>
                 <input type="text" id="tenTuyenQuyDinh" readonly style="background-color: #e9ecef;">
@@ -144,12 +145,63 @@
                 <label>Cách mép đường (m)</label>
                 <input type="number" step="0.1" id="cachMepDuong" placeholder="2">
             </div>
+            
+            <!-- BỔ SUNG CÁC TRƯỜNG MỚI -->
+            <div class="form-group">
+                <label>Lý do cập nhật</label>
+                <select id="lyDoCapNhat">
+                    <option value="Số hóa cáp quang">Số hóa cáp quang</option>
+                    <option value="Sự cố cáp quang">Sự cố cáp quang</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Số MX phát sinh (cái)</label>
+                <input type="number" id="soMxPhatSinh" placeholder="0">
+            </div>
+            <div class="form-group">
+                <label>Số cáp phát sinh (m)</label>
+                <input type="number" id="soCapPhatSinh" placeholder="0">
+            </div>
+            <div class="form-group">
+                <label>Có tráo sợi ?</label>
+                <select id="coTraoSoi">
+                    <option value="Không">Không</option>
+                    <option value="Có">Có</option>
+                </select>
+            </div>
         </div>
 
         <div class="btn-group">
             <button type="button" class="main-btn btn-add" id="btnAdd" onclick="addRecord()">Nút Thêm số liệu số hóa</button>
         </div>
     </form>
+
+    <!-- PHẦN TRA CỨU SỰ CỐ CÁP QUANG -->
+    <div class="search-section">
+        <h3>TRA CỨU SỰ CỐ CÁP QUANG (Lấy 2 điểm kề cận nhất điểm đứt OTDR)</h3>
+        <div class="form-grid">
+            <div class="form-group">
+                <label>Link tra cứu</label>
+                <select id="searchLink" onchange="updateSearchTuyenDropdown()">
+                    <option value="">-- Tất cả Link --</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Tuyến cáp tra cứu</label>
+                <select id="searchTuyenCap">
+                    <option value="">-- Tất cả Tuyến cáp --</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Khoảng cách đo OTDR (km)</label>
+                <input type="number" step="0.01" id="searchOtdr" placeholder="Ví dụ: 53.45">
+            </div>
+        </div>
+        <div class="btn-group">
+            <button type="button" class="main-btn btn-search" onclick="searchClosestPoints()">🔍 Tra cứu sự cố (2 điểm gần nhất)</button>
+            <button type="button" class="main-btn" style="background-color: #6c757d;" onclick="resetSearch()">🔄 Hiển thị tất cả</button>
+        </div>
+    </div>
 
     <h3>Bản đồ hiển thị các điểm cập nhật (Click map hoặc kéo thả Pin để điều chỉnh tọa độ)</h3>
     <div id="map"></div>
@@ -159,7 +211,7 @@
         <table id="dataTable">
             <thead>
                 <tr>
-                    <th>ID</th><th>Trạm quản lý</th><th>Tên tuyến quy định</th><th>Link</th><th>Tuyến cáp</th><th>Chiều dài Link</th><th>Đối tượng</th><th>Phương thức thi công</th><th>OTDR->MX</th><th>Độ sâu/Cao</th><th>Lấy tọa độ</th><th>Thời gian</th><th>Chiều từ</th><th>Diễn giải</th><th>Km</th><th>M</th><th>Chụp ảnh</th><th>Tại Km</th><th>Tuyến đường</th><th>Cách mép đường(m)</th>
+                    <th>ID</th><th>Trạm quản lý</th><th>Tên tuyến quy định</th><th>Link</th><th>Tuyến cáp</th><th>Chiều dài Link</th><th>Đối tượng</th><th>Phương thức thi công</th><th>OTDR->MX</th><th>Độ sâu/Cao</th><th>Lấy tọa độ</th><th>Thời gian</th><th>Chiều từ</th><th>Diễn giải</th><th>Km</th><th>M</th><th>Chụp ảnh</th><th>Tại Km</th><th>Tuyến đường</th><th>Cách mép đường(m)</th><th>Lý do cập nhật</th><th>Số MX phát sinh</th><th>Số cáp phát sinh</th><th>Có tráo sợi ?</th>
                 </tr>
             </thead>
             <tbody id="tableBody"></tbody>
@@ -174,12 +226,13 @@
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyhMj9Jsumve_gUlEP7fmqxpQPVfekzOHLBv0wKpMCnUhmWd-gWTM3mmp75Z3eQD4AscQ/exec";
 
     let libraryData = [];
+    let allRecordsData = [];
     let map;
     let markersLayer;
     let currentMarker = null;
     let liveLocationMarker = null;
     let accuracyCircle = null;
-    let isUserDragging = false; // Biến cờ kiểm soát kéo thả pin
+    let isUserDragging = false;
 
     window.onload = function() {
         document.getElementById('thoiGian').valueAsDate = new Date();
@@ -195,7 +248,6 @@
         }).addTo(map);
         markersLayer = L.layerGroup().addTo(map);
 
-        // Sự kiện khi bản đồ tìm thấy vị trí thực tế qua GPS (Live Tracking)
         map.on('locationfound', function(e) {
             const lat = e.latlng.lat.toFixed(6);
             const lng = e.latlng.lng.toFixed(6);
@@ -203,22 +255,13 @@
 
             document.getElementById('layToaDo').value = `${lat},${lng}`;
 
-            // Hiển thị chấm xanh dương biểu thị vị trí GPS hiện tại đang di chuyển
             if (!liveLocationMarker) {
                 liveLocationMarker = L.circleMarker(e.latlng, {
-                    radius: 8,
-                    fillColor: '#007bff',
-                    color: '#fff',
-                    weight: 2,
-                    opacity: 1,
-                    fillOpacity: 0.9
+                    radius: 8, fillColor: '#007bff', color: '#fff', weight: 2, opacity: 1, fillOpacity: 0.9
                 }).addTo(map).bindPopup("Vị trí GPS thực tế của bạn");
 
                 accuracyCircle = L.circle(e.latlng, radius, {
-                    color: '#007bff',
-                    fillColor: '#007bff',
-                    fillOpacity: 0.15,
-                    weight: 1
+                    color: '#007bff', fillColor: '#007bff', fillOpacity: 0.15, weight: 1
                 }).addTo(map);
             } else {
                 liveLocationMarker.setLatLng(e.latlng);
@@ -226,31 +269,25 @@
                 accuracyCircle.setRadius(radius);
             }
 
-            // Tạo hoặc cập nhật Pin điều chỉnh tọa độ (có thể kéo thả)
             if (!currentMarker) {
                 currentMarker = L.marker(e.latlng, { draggable: true }).addTo(map)
                     .bindPopup("Pin điều chỉnh tọa độ (Kéo thả để chọn chính xác)").openPopup();
                 
-                currentMarker.on('dragstart', function() {
-                    isUserDragging = true;
-                });
-
+                currentMarker.on('dragstart', function() { isUserDragging = true; });
                 currentMarker.on('dragend', function(event) {
                     isUserDragging = false;
                     const pos = event.target.getLatLng();
                     document.getElementById('layToaDo').value = `${pos.lat.toFixed(6)},${pos.lng.toFixed(6)}`;
                 });
             } else if (!isUserDragging) {
-                // Chỉ cập nhật tọa độ tự động khi người dùng không giữ kéo pin
                 currentMarker.setLatLng(e.latlng);
             }
         });
 
         map.on('locationerror', function(e) {
-            alert("Không thể lấy vị trí GPS: " + e.message);
+            console.log("Không thể lấy vị trí GPS: " + e.message);
         });
 
-        // Click trên bản đồ để chỉnh sửa vị trí ghim thủ công
         map.on('click', function(e) {
             const lat = e.latlng.lat.toFixed(6);
             const lng = e.latlng.lng.toFixed(6);
@@ -258,7 +295,6 @@
             setPinOnMap(lat, lng);
         });
 
-        // 🚀 TỰ ĐỘNG GỌI GPS NGAY KHI VỪA TẢI XONG BẢN ĐỒ
         getLocation();
     }
 
@@ -267,11 +303,7 @@
             currentMarker.setLatLng([lat, lng]);
         } else {
             currentMarker = L.marker([lat, lng], { draggable: true }).addTo(map);
-            
-            currentMarker.on('dragstart', function() {
-                isUserDragging = true;
-            });
-
+            currentMarker.on('dragstart', function() { isUserDragging = true; });
             currentMarker.on('dragend', function(event) {
                 isUserDragging = false;
                 const pos = event.target.getLatLng();
@@ -281,28 +313,19 @@
         map.setView([lat, lng], map.getZoom());
     }
 
-    // Kích hoạt theo dõi vị trí liên tục thời gian thực (Live Tracking & Watch)
     function getLocation() {
         if (navigator.geolocation) {
-            map.locate({
-                setView: true,
-                maxZoom: 18,
-                watch: true, // Theo dõi liên tục khi di chuyển
-                enableHighAccuracy: true
-            });
-        } else {
-            alert('Trình duyệt không hỗ trợ GPS.');
+            map.locate({ setView: true, maxZoom: 18, watch: true, enableHighAccuracy: true });
         }
     }
 
-    // Hàm quy định màu sắc marker theo tuyến cáp
     function getMarkerColor(tuyen) {
         if (!tuyen) return '#0d6efd';
         const t = tuyen.toUpperCase();
-        if (t.includes('24FO')) return '#198754'; // Xanh lá
-        if (t.includes('96FO')) return '#fd7e14'; // Cam
-        if (t.includes('8FO'))  return '#dc3545'; // Đỏ
-        if (t.includes('48FO')) return '#6f42c1'; // Tím
+        if (t.includes('24FO')) return '#198754';
+        if (t.includes('96FO')) return '#fd7e14';
+        if (t.includes('8FO'))  return '#dc3545';
+        if (t.includes('48FO')) return '#6f42c1';
         return '#0d6efd';
     }
 
@@ -312,62 +335,69 @@
             const result = await response.json();
             
             libraryData = result.library || [];
-            const data = result.data || [];
+            allRecordsData = result.data || [];
             
             initDropdowns();
-            
-            const tbody = document.getElementById('tableBody');
-            tbody.innerHTML = '';
-            markersLayer.clearLayers();
-
-            data.forEach(row => {
-                tbody.innerHTML += `<tr>
-                    <td>${row.id || ''}</td>
-                    <td>${row.tramQuanLy || ''}</td>
-                    <td>${row.tenTuyenQuyDinh || ''}</td>
-                    <td>${row.link || ''}</td>
-                    <td>${row.tuyenCap || ''}</td>
-                    <td>${row.chieuDaiLink || ''}</td>
-                    <td>${row.doiTuong || ''}</td>
-                    <td>${row.phuongThucThiCong || ''}</td>
-                    <td>${row.otdrMx || ''}</td>
-                    <td>${row.doSau || ''}</td>
-                    <td>${row.layToaDo || ''}</td>
-                    <td>${row.thoiGian || ''}</td>
-                    <td>${row.chieuTu || ''}</td>
-                    <td>${row.dienGiai || ''}</td>
-                    <td>${row.km || ''}</td>
-                    <td>${row.m || ''}</td>
-                    <td>${row.chupAnh || ''}</td>
-                    <td>${row.taiKm || ''}</td>
-                    <td>${row.tuyenDuong || ''}</td>
-                    <td>${row.cachMepDuong || ''}</td>
-                </tr>`;
-
-                if (row.layToaDo && row.layToaDo.includes(',')) {
-                    const parts = row.layToaDo.split(',');
-                    const lat = parseFloat(parts[0]);
-                    const lng = parseFloat(parts[1]);
-                    if (!isNaN(lat) && !isNaN(lng)) {
-                        const color = getMarkerColor(row.tuyenCap);
-                        const labelText = `${row.tuyenCap || ''} - ${row.doiTuong || 'MX'}/${row.taiKm || ''}`;
-                        
-                        L.circleMarker([lat, lng], {
-                            radius: 8,
-                            fillColor: color,
-                            color: '#fff',
-                            weight: 2,
-                            opacity: 1,
-                            fillOpacity: 0.9
-                        }).addTo(markersLayer)
-                          .bindTooltip(labelText, { permanent: true, direction: 'top' })
-                          .bindPopup(`<b>Tuyến: ${row.tuyenCap}</b><br>Trạm: ${row.tramQuanLy}<br>Diễn giải: ${row.dienGiai || ''}`);
-                    }
-                }
-            });
+            renderTableAndMap(allRecordsData);
         } catch (e) {
             console.log("Lỗi tải dữ liệu: ", e);
         }
+    }
+
+    function renderTableAndMap(data) {
+        const tbody = document.getElementById('tableBody');
+        tbody.innerHTML = '';
+        markersLayer.clearLayers();
+
+        data.forEach(row => {
+            tbody.innerHTML += `<tr>
+                <td>${row.id || ''}</td>
+                <td>${row.tramQuanLy || ''}</td>
+                <td>${row.tenTuyenQuyDinh || ''}</td>
+                <td>${row.link || ''}</td>
+                <td>${row.tuyenCap || ''}</td>
+                <td>${row.chieuDaiLink || ''}</td>
+                <td>${row.doiTuong || ''}</td>
+                <td>${row.phuongThucThiCong || ''}</td>
+                <td>${row.otdrMx || ''}</td>
+                <td>${row.doSau || ''}</td>
+                <td>${row.layToaDo || ''}</td>
+                <td>${row.thoiGian || ''}</td>
+                <td>${row.chieuTu || ''}</td>
+                <td>${row.dienGiai || ''}</td>
+                <td>${row.km || ''}</td>
+                <td>${row.m || ''}</td>
+                <td>${row.chupAnh || ''}</td>
+                <td>${row.taiKm || ''}</td>
+                <td>${row.tuyenDuong || ''}</td>
+                <td>${row.cachMepDuong || ''}</td>
+                <td>${row.lyDoCapNhat || ''}</td>
+                <td>${row.soMxPhatSinh || ''}</td>
+                <td>${row.soCapPhatSinh || ''}</td>
+                <td>${row.coTraoSoi || ''}</td>
+            </tr>`;
+
+            if (row.layToaDo && row.layToaDo.includes(',')) {
+                const parts = row.layToaDo.split(',');
+                const lat = parseFloat(parts[0]);
+                const lng = parseFloat(parts[1]);
+                if (!isNaN(lat) && !isNaN(lng)) {
+                    const color = getMarkerColor(row.tuyenCap);
+                    const labelText = `${row.tuyenCap || ''} - ${row.doiTuong || 'MX'}/${row.taiKm || ''} (OTDR: ${row.otdrMx || 0})`;
+                    
+                    L.circleMarker([lat, lng], {
+                        radius: 8,
+                        fillColor: color,
+                        color: '#fff',
+                        weight: 2,
+                        opacity: 1,
+                        fillOpacity: 0.9
+                    }).addTo(markersLayer)
+                      .bindTooltip(labelText, { permanent: true, direction: 'top' })
+                      .bindPopup(`<b>Tuyến: ${row.tuyenCap}</b><br>OTDR->MX: ${row.otdrMx || ''}<br>Trạm: ${row.tramQuanLy}<br>Diễn giải: ${row.dienGiai || ''}`);
+                }
+            }
+        });
     }
 
     function initDropdowns() {
@@ -378,6 +408,15 @@
             tramSelect.innerHTML += `<option value="${tram}">${tram}</option>`;
         });
         updateLinkDropdown();
+
+        // Khởi tạo dropdown cho phần tìm kiếm
+        const searchLinkSelect = document.getElementById('searchLink');
+        const allLinks = [...new Set(libraryData.map(i => i.link).filter(Boolean))];
+        searchLinkSelect.innerHTML = '<option value="">-- Tất cả Link --</option>';
+        allLinks.forEach(l => {
+            searchLinkSelect.innerHTML += `<option value="${l}">${l}</option>`;
+        });
+        updateSearchTuyenDropdown();
     }
 
     function updateLinkDropdown() {
@@ -399,6 +438,22 @@
         updateDetails();
     }
 
+    function updateSearchTuyenDropdown() {
+        const searchLink = document.getElementById('searchLink').value;
+        const searchTuyenSelect = document.getElementById('searchTuyenCap');
+        searchTuyenSelect.innerHTML = '<option value="">-- Tất cả Tuyến cáp --</option>';
+        
+        let tuyens = [];
+        if (searchLink) {
+            tuyens = [...new Set(libraryData.filter(i => i.link === searchLink).map(i => i.tuyen).filter(Boolean))];
+        } else {
+            tuyens = [...new Set(libraryData.map(i => i.tuyen).filter(Boolean))];
+        }
+        tuyens.forEach(t => {
+            searchTuyenSelect.innerHTML += `<option value="${t}">${t}</option>`;
+        });
+    }
+
     function updateDetails() {
         const tram = document.getElementById('tramQuanLy').value;
         const link = document.getElementById('link').value;
@@ -415,6 +470,71 @@
             document.getElementById('tenTuyenQuyDinh').value = '';
             document.getElementById('chieuDaiLink').value = '';
         }
+    }
+
+    // TÍNH TOÁN TÌM 2 ĐIỂM GẦN NHẤT TRƯỚC VÀ SAU ĐIỂM ĐỨT OTDR
+    function searchClosestPoints() {
+        const searchLink = document.getElementById('searchLink').value;
+        const searchTuyen = document.getElementById('searchTuyenCap').value;
+        const targetOtdr = parseFloat(document.getElementById('searchOtdr').value);
+
+        if (isNaN(targetOtdr)) {
+            alert('Vui lòng nhập khoảng cách đo OTDR (km) hợp lệ để tìm kiếm!');
+            return;
+        }
+
+        // Lọc dữ liệu theo link và tuyến cáp nếu có chọn
+        let filtered = allRecordsData.filter(row => {
+            let matchLink = !searchLink || row.link === searchLink;
+            let matchTuyen = !searchTuyen || row.tuyenCap === searchTuyen;
+            let hasOtdr = row.otdrMx !== "" && !isNaN(parseFloat(row.otdrMx));
+            return matchLink && matchTuyen && hasOtdr;
+        });
+
+        if (filtered.length === 0) {
+            alert('Không tìm thấy dữ liệu phù hợp với điều kiện tra cứu!');
+            return;
+        }
+
+        // Chuyển otdrMx sang dạng số để so sánh
+        filtered.forEach(r => r.numericOtdr = parseFloat(r.otdrMx));
+
+        // Tách thành 2 nhóm: điểm trước (<= targetOtdr) và điểm sau (>= targetOtdr)
+        let beforePoints = filtered.filter(r => r.numericOtdr <= targetOtdr);
+        let afterPoints = filtered.filter(r => r.numericOtdr >= targetOtdr);
+
+        let closestPoints = [];
+
+        // Lấy điểm gần nhất phía trước (có numericOtdr lớn nhất trong các điểm <= targetOtdr)
+        if (beforePoints.length > 0) {
+            beforePoints.sort((a, b) => b.numericOtdr - a.numericOtdr);
+            closestPoints.push(beforePoints[0]);
+        }
+
+        // Lấy điểm gần nhất phía sau (có numericOtdr nhỏ nhất trong các điểm >= targetOtdr)
+        if (afterPoints.length > 0) {
+            afterPoints.sort((a, b) => a.numericOtdr - b.numericOtdr);
+            // Tránh trùng lặp nếu điểm đó đã được lấy ở trước
+            if (closestPoints.length === 0 || closestPoints[0].id !== afterPoints[0].id) {
+                closestPoints.push(afterPoints[0]);
+            }
+        }
+
+        if (closestPoints.length === 0) {
+            alert('Không tìm thấy điểm kề cận nào khớp với vị trí OTDR đã nhập.');
+            return;
+        }
+
+        renderTableAndMap(closestPoints);
+        alert(`Đã tìm thấy ${closestPoints.length} điểm kề cận gần nhất với vị trí đứt OTDR (${targetOtdr} km).`);
+    }
+
+    function resetSearch() {
+        document.getElementById('searchLink').value = "";
+        document.getElementById('searchTuyenCap').value = "";
+        document.getElementById('searchOtdr').value = "";
+        updateSearchTuyenDropdown();
+        renderTableAndMap(allRecordsData);
     }
 
     function previewImage(input) {
@@ -457,7 +577,11 @@
             chupAnh: fotoName,
             taiKm: document.getElementById('taiKm').value,
             tuyenDuong: document.getElementById('tuyenDuong').value,
-            cachMepDuong: document.getElementById('cachMepDuong').value
+            cachMepDuong: document.getElementById('cachMepDuong').value,
+            lyDoCapNhat: document.getElementById('lyDoCapNhat').value,
+            soMxPhatSinh: document.getElementById('soMxPhatSinh').value,
+            soCapPhatSinh: document.getElementById('soCapPhatSinh').value,
+            coTraoSoi: document.getElementById('coTraoSoi').value
         };
 
         const btn = document.getElementById('btnAdd');
