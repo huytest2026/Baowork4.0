@@ -5,390 +5,97 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quản lý số hóa tuyến cáp</title>
     <style>
-        :root {
-            --primary-color: #0b5ed7;
-            --success-color: #198754;
-            --warning-color: #ffc107;
-            --danger-color: #dc3545;
-            --bg-color: #f8f9fa;
-            --border-color: #ced4da;
-        }
-        body {
-            font-family: Arial, sans-serif;
-            background-color: var(--bg-color);
-            margin: 0;
-            padding: 20px;
-            color: #333;
-        }
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            background: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        }
-        h2, h3 {
-            color: #2c3e50;
-        }
-        h2 {
-            text-align: center;
-            margin-bottom: 25px;
-        }
-        .form-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-        .form-group {
-            display: flex;
-            flex-direction: column;
-        }
-        .form-group label {
-            font-weight: bold;
-            margin-bottom: 5px;
-            font-size: 13px;
-            color: #495057;
-        }
-        .form-group input, .form-group select {
-            padding: 8px 10px;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            font-size: 14px;
-        }
-        .btn-group {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 30px;
-        }
-        button {
-            padding: 10px 20px;
-            border: none;
-            border-radius: 4px;
-            font-weight: bold;
-            cursor: pointer;
-            color: #fff;
-            font-size: 14px;
-        }
+        :root { --success-color: #198754; --warning-color: #ffc107; --danger-color: #dc3545; }
+        body { font-family: Arial, sans-serif; background-color: #f8f9fa; padding: 20px; }
+        .container { max-width: 1400px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .form-group { display: flex; flex-direction: column; }
+        .form-group label { font-weight: bold; margin-bottom: 5px; font-size: 13px; }
+        .form-group input, .form-group select { padding: 8px; border: 1px solid #ced4da; border-radius: 4px; }
+        .btn-group { display: flex; gap: 10px; margin-bottom: 30px; }
+        button { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; color: #fff; font-weight: bold; }
         .btn-add { background-color: var(--success-color); }
         .btn-update { background-color: var(--warning-color); color: #000; }
-        .btn-reset { background-color: #6c757d; }
-        button:hover { opacity: 0.9; }
-        
-        .table-responsive {
-            overflow-x: auto;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-            font-size: 13px;
-        }
-        th, td {
-            border: 1px solid #dee2e6;
-            padding: 8px 10px;
-            text-align: left;
-            white-space: nowrap;
-        }
-        th {
-            background-color: #ffc107;
-            color: #000;
-        }
-        tr:nth-child(even) {
-            background-color: #f8f9fa;
-        }
-        .actions-cell button {
-            padding: 4px 8px;
-            font-size: 12px;
-            margin-right: 4px;
-        }
-        .btn-edit { background-color: var(--warning-color); color: #000; }
-        .btn-delete { background-color: var(--danger-color); }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th, td { border: 1px solid #dee2e6; padding: 8px; text-align: left; }
+        th { background-color: #ffc107; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <h2>QUẢN LÝ SỐ HÓA TUYẾN CÁP</h2>
-    
-    <!-- Form nhập liệu -->
     <form id="cableForm">
         <input type="hidden" id="rowIndex" value="">
         <div class="form-grid">
-            <div class="form-group">
-                <label>Tên tuyến quy định</label>
-                <input type="text" id="tenTuyenQuyDinh" placeholder="VD: 24FO HUE-ĐNG.01" required>
-            </div>
-            <div class="form-group">
-                <label>Link</label>
-                <input type="text" id="link" placeholder="VD: HUE-ĐNG" required>
-            </div>
-            <div class="form-group">
-                <label>Tuyến cáp</label>
-                <input type="text" id="tuyenCap" placeholder="VD: 24FO">
-            </div>
-            <div class="form-group">
-                <label>Chiều dài Link (Km)</label>
-                <input type="number" step="0.1" id="chieuDaiLink" placeholder="103.4">
-            </div>
-            <div class="form-group">
-                <label>Trạm quản lý</label>
-                <input type="text" id="tramQuanLy" placeholder="Hué">
-            </div>
-            <div class="form-group">
-                <label>Phương thức thi công</label>
-                <input type="text" id="phuongThucThiCong" placeholder="Chôn trực tiếp">
-            </div>
-            <div class="form-group">
-                <label>OTDR -> MX</label>
-                <input type="number" step="0.01" id="otdrMx" placeholder="53.45">
-            </div>
-            <div class="form-group">
-                <label>Độ sâu / Cao cáp</label>
-                <input type="number" id="doSauCaoCap" placeholder="70">
-            </div>
-            <div class="form-group">
-                <label>Lấy tọa độ</label>
-                <input type="text" id="layToaDo" placeholder="16.4802,107.6233">
-            </div>
-            <div class="form-group">
-                <label>Thời gian</label>
-                <input type="date" id="thoiGian">
-            </div>
-            <div class="form-group">
-                <label>Chiều từ</label>
-                <select id="chieuTu">
-                    <option value="Bắc-> Nam">Bắc -> Nam</option>
-                    <option value="Nam -> Bắc">Nam -> Bắc</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Diễn giải</label>
-                <input type="text" id="dienGiai" placeholder="Điểm chuyển trái-> Phải">
-            </div>
-            <div class="form-group">
-                <label>Km</label>
-                <input type="number" id="km" placeholder="876">
-            </div>
-            <div class="form-group">
-                <label>M</label>
-                <input type="number" id="m" placeholder="230">
-            </div>
-            <div class="form-group">
-                <label>Tại Km</label>
-                <input type="text" id="taiKm" placeholder="Km 876+230">
-            </div>
-            <div class="form-group">
-                <label>Tuyến đường</label>
-                <input type="text" id="tuyenDuong" placeholder="QL1A">
-            </div>
-            <div class="form-group">
-                <label>Chụp ảnh</label>
-                <input type="file" id="chupAnh">
-            </div>
+            <div class="form-group"><label>Trạm quản lý</label><input type="text" id="tramQuanLy"></div>
+            <div class="form-group"><label>Tên tuyến quy định</label><input type="text" id="tenTuyenQuyDinh"></div>
+            <div class="form-group"><label>Link</label><input type="text" id="link"></div>
+            <div class="form-group"><label>Tuyến cáp</label><input type="text" id="tuyenCap"></div>
+            <div class="form-group"><label>Đối tượng</label><input type="text" id="doiTuong"></div>
+            <div class="form-group"><label>Chiều dài Link (Km)</label><input type="number" step="0.1" id="chieuDaiLink"></div>
+            <div class="form-group"><label>OTDR -> MX</label><input type="number" step="0.01" id="otdrMx"></div>
+            <div class="form-group"><label>Độ sâu/Cao</label><input type="number" id="doSau"></div>
+            <div class="form-group"><label>Lấy tọa độ</label><input type="text" id="layToaDo"></div>
+            <div class="form-group"><label>Thời gian</label><input type="date" id="thoiGian"></div>
+            <div class="form-group"><label>Chiều từ</label><select id="chieuTu"><option value="Bắc-> Nam">Bắc-> Nam</option><option value="Nam-> Bắc">Nam-> Bắc</option></select></div>
+            <div class="form-group"><label>Diễn giải</label><input type="text" id="dienGiai"></div>
+            <div class="form-group"><label>Tại Km</label><input type="text" id="taiKm"></div>
         </div>
-
         <div class="btn-group">
-            <button type="button" class="btn-add" id="btnAdd" onclick="addRecord()">Nút Thêm số liệu số hóa</button>
-            <button type="button" class="btn-update" id="btnUpdate" onclick="updateRecord()" style="display:none;">Nút Cập nhật/chỉnh sửa</button>
-            <button type="button" class="btn-reset" onclick="resetForm()">Làm mới form</button>
+            <button type="button" class="btn-add" id="btnAdd" onclick="addRecord()">Nút Thêm số liệu</button>
+            <button type="button" class="btn-update" id="btnUpdate" onclick="updateRecord()" style="display:none;">Nút Cập nhật</button>
         </div>
     </form>
 
-    <!-- Bảng danh sách số liệu -->
     <h3>Danh sách số liệu</h3>
-    <div class="table-responsive">
-        <table id="dataTable">
-            <thead>
-                <tr>
-                    <th>STT</th>
-                    <th>Trạm quản lý</th>
-                    <th>Link</th>
-                    <th>Tuyến cáp</th>
-                    <th>Tên tuyến quy định</th>
-                    <th>Chiều dài Link(Km)</th>
-                    <th>OTDR ->MX</th>
-                    <th>Lấy tọa độ</th>
-                    <th>Tại Km</th>
-                    <th>Thời gian</th>
-                    <th>Chiều từ</th>
-                    <th>Diễn giải</th>
-                    <th>Chụp ảnh</th>
-                    <th>Hành động</th>
-                </tr>
-            </thead>
-            <tbody id="tableBody">
-                <!-- Dữ liệu được render động bằng JavaScript -->
-            </tbody>
-        </table>
-    </div>
+    <table id="dataTable">
+        <thead>
+            <tr><th>STT</th><th>Trạm</th><th>Link</th><th>Tuyến</th><th>Đối tượng</th><th>Tên tuyến</th><th>Chiều dài</th><th>OTDR</th><th>Tọa độ</th><th>Tại Km</th><th>Thời gian</th><th>Chiều</th><th>Diễn giải</th></tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+    </table>
 </div>
 
 <script>
-    // Thay link bên dưới bằng link Google App Script của bạn
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwnSMSXVWjJz3kSIjakz-uhZpk63SubmgOpTEiLZMQn-uXwkOmS1Z7ZrAN8mGYUjHWx0w/exec";
 
-    // Lấy dữ liệu từ localStorage nếu có
-    let records = JSON.parse(localStorage.getItem('cableRecords')) || [];
-
-    // Hàm render bảng dữ liệu
-    function renderTable() {
-        const tbody = document.getElementById('tableBody');
-        tbody.innerHTML = '';
-        
-        if (records.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="14" style="text-align: center; color: #777;">Chưa có dữ liệu nào.</td></tr>`;
-            return;
-        }
-
-        records.forEach((record, index) => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${index + 1}</td>
-                <td>${record.tramQuanLy || ''}</td>
-                <td>${record.link || ''}</td>
-                <td>${record.tuyenCap || ''}</td>
-                <td>${record.tenTuyenQuyDinh || ''}</td>
-                <td>${record.chieuDaiLink || ''}</td>
-                <td>${record.otdrMx || ''}</td>
-                <td>${record.layToaDo || ''}</td>
-                <td>${record.taiKm || ''}</td>
-                <td>${record.thoiGian || ''}</td>
-                <td>${record.chieuTu || ''}</td>
-                <td>${record.dienGiai || ''}</td>
-                <td>${record.chupAnh || ''}</td>
-                <td class="actions-cell">
-                    <button class="btn-edit" onclick="editRecord(${index})">Sửa</button>
-                    <button class="btn-delete" onclick="deleteRecord(${index})">Xóa</button>
-                </td>
-            `;
-            tbody.appendChild(tr);
-        });
-    }
-
-    // Lấy giá trị từ các ô input của form
     function getFormData() {
         return {
-            tenTuyenQuyDinh: document.getElementById('tenTuyenQuyDinh').value,
+            tramQuanLy: document.getElementById('tramQuanLy').value,
             link: document.getElementById('link').value,
             tuyenCap: document.getElementById('tuyenCap').value,
+            doiTuong: document.getElementById('doiTuong').value, // Trường mới
+            tenTuyenQuyDinh: document.getElementById('tenTuyenQuyDinh').value,
             chieuDaiLink: document.getElementById('chieuDaiLink').value,
-            tramQuanLy: document.getElementById('tramQuanLy').value,
-            phuongThucThiCong: document.getElementById('phuongThucThiCong').value,
             otdrMx: document.getElementById('otdrMx').value,
-            doSauCaoCap: document.getElementById('doSauCaoCap').value,
+            doSau: document.getElementById('doSau').value,
             layToaDo: document.getElementById('layToaDo').value,
+            taiKm: document.getElementById('taiKm').value,
             thoiGian: document.getElementById('thoiGian').value,
             chieuTu: document.getElementById('chieuTu').value,
-            dienGiai: document.getElementById('dienGiai').value,
-            km: document.getElementById('km').value,
-            m: document.getElementById('m').value,
-            taiKm: document.getElementById('taiKm').value,
-            tuyenDuong: document.getElementById('tuyenDuong').value,
-            chupAnh: document.getElementById('chupAnh').files[0] ? document.getElementById('chupAnh').files[0].name : ''
+            dienGiai: document.getElementById('dienGiai').value
         };
     }
 
-    // Thêm bản ghi mới (Gửi lên Google Sheets và lưu cục bộ)
     async function addRecord() {
         const data = getFormData();
-        if(!data.tenTuyenQuyDinh || !data.link) {
-            alert('Vui lòng điền đầy đủ các thông tin bắt buộc (Tên tuyến quy định, Link)!');
-            return;
-        }
-
         const btn = document.getElementById('btnAdd');
-        const originalText = btn.innerText;
         btn.innerText = "Đang gửi...";
         btn.disabled = true;
 
         try {
-            // Gửi dữ liệu qua Google Apps Script lên Google Sheets
             await fetch(GOOGLE_SCRIPT_URL, {
                 method: 'POST',
                 mode: 'no-cors',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
             });
-
-            // Lưu trữ cục bộ để hiển thị bảng ngay lập tức
-            records.push(data);
-            localStorage.setItem('cableRecords', JSON.stringify(records));
-            renderTable();
-            resetForm();
-            alert('Thêm số liệu và đồng bộ lên Google Sheets thành công!');
-        } catch (error) {
-            alert('Có lỗi xảy ra: ' + error);
-        } finally {
-            btn.innerText = originalText;
-            btn.disabled = false;
-        }
+            alert('Đã gửi dữ liệu lên Google Sheets!');
+            location.reload(); // Tải lại trang để cập nhật bảng
+        } catch (error) { alert('Lỗi: ' + error); }
+        finally { btn.innerText = "Nút Thêm số liệu"; btn.disabled = false; }
     }
-
-    // Đưa dữ liệu lên form để chỉnh sửa
-    function editRecord(index) {
-        const record = records[index];
-        document.getElementById('rowIndex').value = index;
-        document.getElementById('tenTuyenQuyDinh').value = record.tenTuyenQuyDinh || '';
-        document.getElementById('link').value = record.link || '';
-        document.getElementById('tuyenCap').value = record.tuyenCap || '';
-        document.getElementById('chieuDaiLink').value = record.chieuDaiLink || '';
-        document.getElementById('tramQuanLy').value = record.tramQuanLy || '';
-        document.getElementById('phuongThucThiCong').value = record.phuongThucThiCong || '';
-        document.getElementById('otdrMx').value = record.otdrMx || '';
-        document.getElementById('doSauCaoCap').value = record.doSauCaoCap || '';
-        document.getElementById('layToaDo').value = record.layToaDo || '';
-        document.getElementById('thoiGian').value = record.thoiGian || '';
-        document.getElementById('chieuTu').value = record.chieuTu || 'Bắc-> Nam';
-        document.getElementById('dienGiai').value = record.dienGiai || '';
-        document.getElementById('km').value = record.km || '';
-        document.getElementById('m').value = record.m || '';
-        document.getElementById('taiKm').value = record.taiKm || '';
-        document.getElementById('tuyenDuong').value = record.tuyenDuong || '';
-
-        // Đổi hiển thị nút
-        document.getElementById('btnAdd').style.display = 'none';
-        document.getElementById('btnUpdate').style.display = 'inline-block';
-    }
-
-    // Cập nhật bản ghi sau khi sửa
-    function updateRecord() {
-        const index = document.getElementById('rowIndex').value;
-        if (index === '') return;
-
-        const data = getFormData();
-        if(!data.chupAnh && records[index]) {
-            data.chupAnh = records[index].chupAnh; // Giữ lại tên ảnh cũ nếu không chọn ảnh mới
-        }
-
-        records[index] = data;
-        localStorage.setItem('cableRecords', JSON.stringify(records));
-        renderTable();
-        resetForm();
-        alert('Cập nhật số liệu thành công!');
-    }
-
-    // Xóa bản ghi
-    function deleteRecord(index) {
-        if(confirm('Bạn có chắc chắn muốn xóa bản ghi này?')) {
-            records.splice(index, 1);
-            localStorage.setItem('cableRecords', JSON.stringify(records));
-            renderTable();
-        }
-    }
-
-    // Reset lại form và trạng thái nút
-    function resetForm() {
-        document.getElementById('cableForm').reset();
-        document.getElementById('rowIndex').value = '';
-        document.getElementById('btnAdd').style.display = 'inline-block';
-        document.getElementById('btnUpdate').style.display = 'none';
-    }
-
-    // Tải dữ liệu vào bảng khi mở trang
-    window.onload = renderTable;
 </script>
-
 </body>
 </html>
