@@ -146,23 +146,23 @@
                 <input type="number" step="0.1" id="cachMepDuong" placeholder="2">
             </div>
             
-            <!-- BỔ SUNG CÁC TRƯỜNG MỚI -->
+            <!-- CÁC TRƯỜNG CÓ ĐIỀU KIỆN HIỂN THỊ (Mặc định chọn "Số hóa cáp quang") -->
             <div class="form-group">
                 <label>Lý do cập nhật</label>
-                <select id="lyDoCapNhat">
-                    <option value="Số hóa cáp quang">Số hóa cáp quang</option>
+                <select id="lyDoCapNhat" onchange="toggleIncidentFields()">
+                    <option value="Số hóa cáp quang" selected>Số hóa cáp quang</option>
                     <option value="Sự cố cáp quang">Sự cố cáp quang</option>
                 </select>
             </div>
-            <div class="form-group">
+            <div class="form-group" id="fieldSoMx" style="display: none;">
                 <label>Số MX phát sinh (cái)</label>
                 <input type="number" id="soMxPhatSinh" placeholder="0">
             </div>
-            <div class="form-group">
+            <div class="form-group" id="fieldSoCap" style="display: none;">
                 <label>Số cáp phát sinh (m)</label>
                 <input type="number" id="soCapPhatSinh" placeholder="0">
             </div>
-            <div class="form-group">
+            <div class="form-group" id="fieldCoTraoSoi" style="display: none;">
                 <label>Có tráo sợi ?</label>
                 <select id="coTraoSoi">
                     <option value="Không">Không</option>
@@ -238,7 +238,25 @@
         document.getElementById('thoiGian').valueAsDate = new Date();
         initMap();
         loadDataFromSheet();
+        toggleIncidentFields(); // Kiểm tra trạng thái hiển thị ban đầu
     };
+
+    function toggleIncidentFields() {
+        const lyDo = document.getElementById('lyDoCapNhat').value;
+        const fieldSoMx = document.getElementById('fieldSoMx');
+        const fieldSoCap = document.getElementById('fieldSoCap');
+        const fieldCoTraoSoi = document.getElementById('fieldCoTraoSoi');
+
+        if (lyDo === 'Sự cố cáp quang') {
+            fieldSoMx.style.display = 'flex';
+            fieldSoCap.style.display = 'flex';
+            fieldCoTraoSoi.style.display = 'flex';
+        } else {
+            fieldSoMx.style.display = 'none';
+            fieldSoCap.style.display = 'none';
+            fieldCoTraoSoi.style.display = 'none';
+        }
+    }
 
     function initMap() {
         map = L.map('map').setView([16.4637, 107.5909], 13);
@@ -409,7 +427,6 @@
         });
         updateLinkDropdown();
 
-        // Khởi tạo dropdown cho phần tìm kiếm
         const searchLinkSelect = document.getElementById('searchLink');
         const allLinks = [...new Set(libraryData.map(i => i.link).filter(Boolean))];
         searchLinkSelect.innerHTML = '<option value="">-- Tất cả Link --</option>';
@@ -472,7 +489,6 @@
         }
     }
 
-    // TÍNH TOÁN TÌM 2 ĐIỂM GẦN NHẤT TRƯỚC VÀ SAU ĐIỂM ĐỨT OTDR
     function searchClosestPoints() {
         const searchLink = document.getElementById('searchLink').value;
         const searchTuyen = document.getElementById('searchTuyenCap').value;
@@ -483,7 +499,6 @@
             return;
         }
 
-        // Lọc dữ liệu theo link và tuyến cáp nếu có chọn
         let filtered = allRecordsData.filter(row => {
             let matchLink = !searchLink || row.link === searchLink;
             let matchTuyen = !searchTuyen || row.tuyenCap === searchTuyen;
@@ -496,25 +511,20 @@
             return;
         }
 
-        // Chuyển otdrMx sang dạng số để so sánh
         filtered.forEach(r => r.numericOtdr = parseFloat(r.otdrMx));
 
-        // Tách thành 2 nhóm: điểm trước (<= targetOtdr) và điểm sau (>= targetOtdr)
         let beforePoints = filtered.filter(r => r.numericOtdr <= targetOtdr);
         let afterPoints = filtered.filter(r => r.numericOtdr >= targetOtdr);
 
         let closestPoints = [];
 
-        // Lấy điểm gần nhất phía trước (có numericOtdr lớn nhất trong các điểm <= targetOtdr)
         if (beforePoints.length > 0) {
             beforePoints.sort((a, b) => b.numericOtdr - a.numericOtdr);
             closestPoints.push(beforePoints[0]);
         }
 
-        // Lấy điểm gần nhất phía sau (có numericOtdr nhỏ nhất trong các điểm >= targetOtdr)
         if (afterPoints.length > 0) {
             afterPoints.sort((a, b) => a.numericOtdr - b.numericOtdr);
-            // Tránh trùng lặp nếu điểm đó đã được lấy ở trước
             if (closestPoints.length === 0 || closestPoints[0].id !== afterPoints[0].id) {
                 closestPoints.push(afterPoints[0]);
             }
@@ -558,6 +568,8 @@
         const fileInput = document.getElementById('chupAnh');
         let fotoName = fileInput.files.length > 0 ? fileInput.files[0].name : "";
 
+        const lyDo = document.getElementById('lyDoCapNhat').value;
+
         const data = {
             tramQuanLy: document.getElementById('tramQuanLy').value,
             tenTuyenQuyDinh: document.getElementById('tenTuyenQuyDinh').value,
@@ -578,10 +590,10 @@
             taiKm: document.getElementById('taiKm').value,
             tuyenDuong: document.getElementById('tuyenDuong').value,
             cachMepDuong: document.getElementById('cachMepDuong').value,
-            lyDoCapNhat: document.getElementById('lyDoCapNhat').value,
-            soMxPhatSinh: document.getElementById('soMxPhatSinh').value,
-            soCapPhatSinh: document.getElementById('soCapPhatSinh').value,
-            coTraoSoi: document.getElementById('coTraoSoi').value
+            lyDoCapNhat: lyDo,
+            soMxPhatSinh: lyDo === 'Sự cố cáp quang' ? document.getElementById('soMxPhatSinh').value : '',
+            soCapPhatSinh: lyDo === 'Sự cố cáp quang' ? document.getElementById('soCapPhatSinh').value : '',
+            coTraoSoi: lyDo === 'Sự cố cáp quang' ? document.getElementById('coTraoSoi').value : ''
         };
 
         const btn = document.getElementById('btnAdd');
