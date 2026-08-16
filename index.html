@@ -179,6 +179,7 @@
     let currentMarker = null;
     let liveLocationMarker = null;
     let accuracyCircle = null;
+    let isUserDragging = false; // Biến cờ kiểm soát kéo thả pin
 
     window.onload = function() {
         document.getElementById('thoiGian').valueAsDate = new Date();
@@ -230,12 +231,17 @@
                 currentMarker = L.marker(e.latlng, { draggable: true }).addTo(map)
                     .bindPopup("Pin điều chỉnh tọa độ (Kéo thả để chọn chính xác)").openPopup();
                 
+                currentMarker.on('dragstart', function() {
+                    isUserDragging = true;
+                });
+
                 currentMarker.on('dragend', function(event) {
+                    isUserDragging = false;
                     const pos = event.target.getLatLng();
                     document.getElementById('layToaDo').value = `${pos.lat.toFixed(6)},${pos.lng.toFixed(6)}`;
                 });
-            } else if (!currentMarker.isDragging()) {
-                // Nếu chưa thao tác kéo thả thủ công, cập nhật pin theo vị trí GPS mới
+            } else if (!isUserDragging) {
+                // Chỉ cập nhật tọa độ tự động khi người dùng không giữ kéo pin
                 currentMarker.setLatLng(e.latlng);
             }
         });
@@ -261,7 +267,13 @@
             currentMarker.setLatLng([lat, lng]);
         } else {
             currentMarker = L.marker([lat, lng], { draggable: true }).addTo(map);
+            
+            currentMarker.on('dragstart', function() {
+                isUserDragging = true;
+            });
+
             currentMarker.on('dragend', function(event) {
+                isUserDragging = false;
                 const pos = event.target.getLatLng();
                 document.getElementById('layToaDo').value = `${pos.lat.toFixed(6)},${pos.lng.toFixed(6)}`;
             });
