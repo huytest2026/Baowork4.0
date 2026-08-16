@@ -243,7 +243,8 @@
         map.on('locationerror', function(e) {
             alert("Không thể lấy vị trí GPS: " + e.message);
         });
-
+// 🚀 TỰ ĐỘNG GỌI GPS NGAY KHI VỪA TẢI XONG BẢN ĐỒ
+    getLocation();
         // Click trên bản đồ để chỉnh sửa vị trí ghim thủ công
         map.on('click', function(e) {
             const lat = e.latlng.lat.toFixed(6);
