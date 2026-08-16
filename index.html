@@ -11,13 +11,15 @@
         .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; margin-bottom: 20px; }
         .form-group { display: flex; flex-direction: column; }
         .form-group label { font-weight: bold; margin-bottom: 5px; font-size: 13px; }
-        .form-group input, .form-group select { padding: 8px; border: 1px solid #ced4da; border-radius: 4px; }
+        .form-group input, .form-group select { padding: 8px; border: 1px solid #ced4da; border-radius: 4px; font-size: 14px; }
+        .input-with-btn { display: flex; gap: 5px; }
+        .input-with-btn input { flex: 1; }
+        .input-with-btn button { padding: 0 10px; background-color: #0d6efd; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; }
         .btn-group { display: flex; gap: 10px; margin-bottom: 30px; }
-        button { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; color: #fff; font-weight: bold; }
+        button.main-btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; color: #fff; font-weight: bold; }
         .btn-add { background-color: var(--success-color); }
-        .btn-update { background-color: var(--warning-color); color: #000; }
-        table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        th, td { border: 1px solid #dee2e6; padding: 8px; text-align: left; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
+        th, td { border: 1px solid #dee2e6; padding: 8px; text-align: left; white-space: nowrap; }
         th { background-color: #ffc107; }
     </style>
 </head>
@@ -26,46 +28,203 @@
 <div class="container">
     <h2>QUẢN LÝ SỐ HÓA TUYẾN CÁP</h2>
     <form id="cableForm">
-        <input type="hidden" id="rowIndex" value="">
         <div class="form-grid">
-            <div class="form-group"><label>Trạm quản lý</label><input type="text" id="tramQuanLy"></div>
-            <div class="form-group"><label>Tên tuyến quy định</label><input type="text" id="tenTuyenQuyDinh"></div>
-            <div class="form-group"><label>Link</label><input type="text" id="link"></div>
-            <div class="form-group"><label>Tuyến cáp</label><input type="text" id="tuyenCap"></div>
-            <div class="form-group"><label>Đối tượng</label><input type="text" id="doiTuong"></div>
-            <div class="form-group"><label>Chiều dài Link (Km)</label><input type="number" step="0.1" id="chieuDaiLink"></div>
-            <div class="form-group"><label>OTDR -> MX</label><input type="number" step="0.01" id="otdrMx"></div>
-            <div class="form-group"><label>Độ sâu/Cao</label><input type="number" id="doSau"></div>
-            <div class="form-group"><label>Lấy tọa độ</label><input type="text" id="layToaDo"></div>
-            <div class="form-group"><label>Thời gian</label><input type="date" id="thoiGian"></div>
-            <div class="form-group"><label>Chiều từ</label><select id="chieuTu"><option value="Bắc-> Nam">Bắc-> Nam</option><option value="Nam-> Bắc">Nam-> Bắc</option></select></div>
-            <div class="form-group"><label>Diễn giải</label><input type="text" id="dienGiai"></div>
-            <div class="form-group"><label>Tại Km</label><input type="text" id="taiKm"></div>
+            <!-- Dropdown Trạm quản lý -->
+            <div class="form-group">
+                <label>Trạm quản lý</label>
+                <select id="tramQuanLy" onchange="filterLibrary()"></select>
+            </div>
+            <!-- Dropdown Link -->
+            <div class="form-group">
+                <label>Link</label>
+                <select id="link" onchange="updateDetails()"></select>
+            </div>
+            <!-- Dropdown Tuyến cáp -->
+            <div class="form-group">
+                <label>Tuyến cáp</label>
+                <select id="tuyenCap" onchange="updateDetails()"></select>
+            </div>
+            <!-- Dropdown Tên tuyến quy định -->
+            <div class="form-group">
+                <label>Tên tuyến quy định</label>
+                <select id="tenTuyenQuyDinh" onchange="updateDetails()"></select>
+            </div>
+            
+            <div class="form-group">
+                <label>Đối tượng</label>
+                <input type="text" id="doiTuong" value="MX">
+            </div>
+            <div class="form-group">
+                <label>Chiều dài Link (Km)</label>
+                <input type="number" step="0.1" id="chieuDaiLink" readonly style="background-color: #e9ecef;">
+            </div>
+            <div class="form-group">
+                <label>OTDR -> MX</label>
+                <input type="number" step="0.01" id="otdrMx" placeholder="53.45">
+            </div>
+            <div class="form-group">
+                <label>Độ sâu/Cao cáp</label>
+                <input type="number" id="doSau" placeholder="70">
+            </div>
+
+            <!-- Lấy tọa độ có nút định vị GPS -->
+            <div class="form-group">
+                <label>Lấy tọa độ</label>
+                <div class="input-with-btn">
+                    <input type="text" id="layToaDo" placeholder="16.4802,107.6233">
+                    <button type="button" onclick="getLocation()" title="Định vị GPS thực tế">📍 GPS</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Thời gian</label>
+                <input type="date" id="thoiGian">
+            </div>
+            <div class="form-group">
+                <label>Chiều từ</label>
+                <select id="chieuTu">
+                    <option value="Bắc-> Nam">Bắc -> Nam</option>
+                    <option value="Nam -> Bắc">Nam -> Bắc</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Diễn giải</label>
+                <input type="text" id="dienGiai" placeholder="Điểm chuyển trái-> Phải">
+            </div>
+            
+            <!-- Bổ sung 2 trường Km và M -->
+            <div class="form-group">
+                <label>Km</label>
+                <input type="number" id="km" placeholder="876" oninput="calculateTaiKm()">
+            </div>
+            <div class="form-group">
+                <label>M</label>
+                <input type="number" id="m" placeholder="230" oninput="calculateTaiKm()">
+            </div>
+            <div class="form-group">
+                <label>Tại Km (Tự động)</label>
+                <input type="text" id="taiKm" readonly style="background-color: #e9ecef;" placeholder="Km 876+230">
+            </div>
         </div>
+
         <div class="btn-group">
-            <button type="button" class="btn-add" id="btnAdd" onclick="addRecord()">Nút Thêm số liệu</button>
-            <button type="button" class="btn-update" id="btnUpdate" onclick="updateRecord()" style="display:none;">Nút Cập nhật</button>
+            <button type="button" class="main-btn btn-add" id="btnAdd" onclick="addRecord()">Nút Thêm số liệu số hóa</button>
         </div>
     </form>
 
     <h3>Danh sách số liệu</h3>
-    <table id="dataTable">
-        <thead>
-            <tr><th>STT</th><th>Trạm</th><th>Link</th><th>Tuyến</th><th>Đối tượng</th><th>Tên tuyến</th><th>Chiều dài</th><th>OTDR</th><th>Tọa độ</th><th>Tại Km</th><th>Thời gian</th><th>Chiều</th><th>Diễn giải</th></tr>
-        </thead>
-        <tbody id="tableBody"></tbody>
-    </table>
+    <div style="overflow-x: auto;">
+        <table id="dataTable">
+            <thead>
+                <tr>
+                    <th>STT</th><th>Trạm</th><th>Link</th><th>Tuyến</th><th>Đối tượng</th><th>Tên tuyến</th><th>Chiều dài</th><th>OTDR</th><th>Tọa độ</th><th>Tại Km</th><th>Thời gian</th><th>Chiều</th><th>Diễn giải</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+    </div>
 </div>
 
 <script>
+    // Dữ liệu mẫu thư viện mô phỏng từ sheet LIBRARY của bạn
+    // (Sau này bạn có thể thay bằng hàm fetch lấy dữ liệu động từ Google Apps Script)
+    const libraryData = [
+        { tram: "HUE", tuyen: "24FO", link: "HUE-DNG", tenTuyen: "24FO HUE-ĐNG.01", chieuDai: 90 },
+        { tram: "HUE", tuyen: "96FO", link: "HUE-DNG", tenTuyen: "96FO HUE-ĐNG.01", chieuDai: 89.7 },
+        { tram: "HUE", tuyen: "48FO", link: "HUE-DNG", tenTuyen: "48FO HUE-ĐNG.01", chieuDai: 80.8 },
+        { tram: "HUE", tuyen: "8FO", link: "HUE-DNG", tenTuyen: "08FO HUE-ĐNG.01", chieuDai: 88.7 },
+        { tram: "ALI", tuyen: "24FO", link: "ALI-HIN", tenTuyen: "24FO ALI-HIEN.01", chieuDai: 120.3 }
+    ];
+
+    // Khởi tạo các danh sách thả xuống khi tải trang
+    window.onload = function() {
+        // Đặt ngày hiện tại mặc định
+        document.getElementById('thoiGian').valueAsDate = new Date();
+        initDropdowns();
+    };
+
+    function initDropdowns() {
+        const tramSet = [...new Set(libraryData.map(item => item.tram))];
+        const tramSelect = document.getElementById('tramQuanLy');
+        tramSelect.innerHTML = '';
+        tramSet.forEach(tram => {
+            tramSelect.innerHTML += `<option value="${tram}">${tram}</option>`;
+        });
+        filterLibrary();
+    }
+
+    // Lọc dữ liệu tương ứng khi chọn Trạm quản lý
+    function filterLibrary() {
+        const selectedTram = document.getElementById('tramQuanLy').value;
+        const filtered = libraryData.filter(item => item.tram === selectedTram);
+
+        const linkSelect = document.getElementById('link');
+        const tuyenSelect = document.getElementById('tuyenCap');
+        const tenTuyenSelect = document.getElementById('tenTuyenQuyDinh');
+
+        linkSelect.innerHTML = '';
+        tuyenSelect.innerHTML = '';
+        tenTuyenSelect.innerHTML = '';
+
+        [...new Set(filtered.map(i => i.link))].forEach(l => linkSelect.innerHTML += `<option value="${l}">${l}</option>`);
+        [...new Set(filtered.map(i => i.tuyen))].forEach(t => tuyenSelect.innerHTML += `<option value="${t}">${t}</option>`);
+        [...new Set(filtered.map(i => i.tenTuyen))].forEach(tt => tenTuyenSelect.innerHTML += `<option value="${tt}">${tt}</option>`);
+
+        updateDetails();
+    }
+
+    // Tự động điền Chiều dài Link khi thay đổi thông số
+    function updateDetails() {
+        const tram = document.getElementById('tramQuanLy').value;
+        const link = document.getElementById('link').value;
+        const tuyen = document.getElementById('tuyenCap').value;
+
+        const found = libraryData.find(item => item.tram === tram && item.link === link && item.tuyen === tuyen);
+        if (found) {
+            document.getElementById('chieuDaiLink').value = found.chieuDai;
+            document.getElementById('tenTuyenQuyDinh').value = found.tenTuyen;
+        } else {
+            document.getElementById('chieuDaiLink').value = '';
+        }
+    }
+
+    // Chức năng định vị GPS thực tế
+    function getLocation() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    const lat = position.coords.latitude.toFixed(6);
+                    const lng = position.coords.longitude.toFixed(6);
+                    document.getElementById('layToaDo').value = `${lat},${lng}`;
+                },
+                (error) => {
+                    alert('Không thể lấy tọa độ. Vui lòng kiểm tra quyền truy cập vị trí của trình duyệt!');
+                }
+            );
+        } else {
+            alert('Trình duyệt của bạn không hỗ trợ định vị GPS.');
+        }
+    }
+
+    // Tự động tính toán "Tại Km" từ Km và M
+    function calculateTaiKm() {
+        const km = document.getElementById('km').value;
+        const m = document.getElementById('m').value;
+        if (km !== '') {
+            document.getElementById('taiKm').value = `Km ${km}${m ? '+' + m : ''}`;
+        } else {
+            document.getElementById('taiKm').value = '';
+        }
+    }
+
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwnSMSXVWjJz3kSIjakz-uhZpk63SubmgOpTEiLZMQn-uXwkOmS1Z7ZrAN8mGYUjHWx0w/exec";
 
-    function getFormData() {
-        return {
+    async function addRecord() {
+        const data = {
             tramQuanLy: document.getElementById('tramQuanLy').value,
             link: document.getElementById('link').value,
             tuyenCap: document.getElementById('tuyenCap').value,
-            doiTuong: document.getElementById('doiTuong').value, // Trường mới
+            doiTuong: document.getElementById('doiTuong').value,
             tenTuyenQuyDinh: document.getElementById('tenTuyenQuyDinh').value,
             chieuDaiLink: document.getElementById('chieuDaiLink').value,
             otdrMx: document.getElementById('otdrMx').value,
@@ -76,10 +235,7 @@
             chieuTu: document.getElementById('chieuTu').value,
             dienGiai: document.getElementById('dienGiai').value
         };
-    }
 
-    async function addRecord() {
-        const data = getFormData();
         const btn = document.getElementById('btnAdd');
         btn.innerText = "Đang gửi...";
         btn.disabled = true;
@@ -91,10 +247,14 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
             });
-            alert('Đã gửi dữ liệu lên Google Sheets!');
-            location.reload(); // Tải lại trang để cập nhật bảng
-        } catch (error) { alert('Lỗi: ' + error); }
-        finally { btn.innerText = "Nút Thêm số liệu"; btn.disabled = false; }
+            alert('Thêm số liệu thành công!');
+            location.reload();
+        } catch (error) {
+            alert('Lỗi: ' + error);
+        } finally {
+            btn.innerText = "Nút Thêm số liệu số hóa";
+            btn.disabled = false;
+        }
     }
 </script>
 </body>
