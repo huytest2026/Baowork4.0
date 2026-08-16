@@ -143,7 +143,7 @@
         <table id="dataTable">
             <thead>
                 <tr>
-                    <th>Trạm quản lý</th><th>Tên tuyến quy định</th><th>Link</th><th>Tuyến cáp</th><th>Chiều dài Link</th><th>Đối tượng</th><th>Phương thức thi công</th><th>OTDR->MX</th><th>Độ sâu/Cao</th><th>Lấy tọa độ</th><th>Thời gian</th><th>Chiều từ</th><th>Diễn giải</th><th>Km</th><th>M</th><th>Chụp ảnh</th><th>Tại Km</th><th>Tuyến đường</th><th>Cách mép đường(m)</th>
+                    <th>ID</th><th>Trạm quản lý</th><th>Tên tuyến quy định</th><th>Link</th><th>Tuyến cáp</th><th>Chiều dài Link</th><th>Đối tượng</th><th>Phương thức thi công</th><th>OTDR->MX</th><th>Độ sâu/Cao</th><th>Lấy tọa độ</th><th>Thời gian</th><th>Chiều từ</th><th>Diễn giải</th><th>Km</th><th>M</th><th>Chụp ảnh</th><th>Tại Km</th><th>Tuyến đường</th><th>Cách mép đường(m)</th>
                 </tr>
             </thead>
             <tbody id="tableBody"></tbody>
@@ -156,7 +156,6 @@
 <script>
     const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwnSMSXVWjJz3kSIjakz-uhZpk63SubmgOpTEiLZMQn-uXwkOmS1Z7ZrAN8mGYUjHWx0w/exec";
 
-    // Thư viện mẫu liên thông cascading
     const libraryData = [
         { tram: "HUE", link: "HUE-DNG", tuyen: "24FO", tenTuyen: "24FO HUE-ĐNG.01", chieuDai: 90 },
         { tram: "HUE", link: "HUE-DNG", tuyen: "96FO", tenTuyen: "96FO HUE-ĐNG.01", chieuDai: 89.7 },
@@ -260,7 +259,6 @@
         }
     }
 
-    // Tải dữ liệu từ Google Sheets lên Bảng và Bản đồ
     async function loadDataFromSheet() {
         try {
             const response = await fetch(GOOGLE_SCRIPT_URL);
@@ -271,8 +269,8 @@
             markersLayer.clearLayers();
 
             data.forEach(row => {
-                // 1. Thêm vào bảng
                 tbody.innerHTML += `<tr>
+                    <td>${row.id || ''}</td>
                     <td>${row.tramQuanLy || ''}</td>
                     <td>${row.tenTuyenQuyDinh || ''}</td>
                     <td>${row.link || ''}</td>
@@ -294,7 +292,6 @@
                     <td>${row.cachMepDuong || ''}</td>
                 </tr>`;
 
-                // 2. Hiển thị lên bản đồ dạng [Đối tượng]/[Tại Km]
                 if (row.layToaDo && row.layToaDo.includes(',')) {
                     const parts = row.layToaDo.split(',');
                     const lat = parseFloat(parts[0]);
