@@ -501,30 +501,44 @@
         const searchLink = document.getElementById('searchLink').value;
         const searchTuyen = document.getElementById('searchTuyenCap').value;
         const searchLyDo = document.getElementById('searchLyDo').value;
-        const targetOtdr = parseFloat(document.getElementById('searchOtdr').value);
-
-        if (isNaN(targetOtdr)) {
-            alert('Vui lòng nhập khoảng cách đo OTDR (km) hợp lệ để tìm kiếm!');
-            return;
-        }
+        const targetOtdrVal = document.getElementById('searchOtdr').value.trim();
 
         let filtered = allRecordsData.filter(row => {
             let matchLink = !searchLink || row.link === searchLink;
             let matchTuyen = !searchTuyen || row.tuyenCap === searchTuyen;
             let matchLyDo = !searchLyDo || row.lyDoCapNhat === searchLyDo;
-            let hasOtdr = row.otdrMx !== "" && !isNaN(parseFloat(row.otdrMx));
-            return matchLink && matchTuyen && matchLyDo && hasOtdr;
+            return matchLink && matchTuyen && matchLyDo;
         });
 
-        if (filtered.length === 0) {
-            alert('Không tìm thấy dữ liệu phù hợp với điều kiện tra cứu!');
+        // Nếu chọn "Số hóa cáp quang" HOẶC không nhập OTDR (đối với Sự cố cáp quang hoặc tất cả lý do)
+        if (searchLyDo === 'Số hóa cáp quang' || targetOtdrVal === '') {
+            if (filtered.length === 0) {
+                alert('Không tìm thấy dữ liệu phù hợp với điều kiện tra cứu!');
+                return;
+            }
+            renderTableAndMap(filtered);
+            alert(`Đã tìm thấy ${filtered.length} bản ghi phù hợp.`);
             return;
         }
 
-        filtered.forEach(r => r.numericOtdr = parseFloat(r.otdrMx));
+        // Trường hợp "Sự cố cáp quang" VÀ CÓ NHẬP OTDR
+        const targetOtdr = parseFloat(targetOtdrVal);
+        if (isNaN(targetOtdr)) {
+            alert('Vui lòng nhập khoảng cách đo OTDR (km) hợp lệ để tìm kiếm!');
+            return;
+        }
 
-        let beforePoints = filtered.filter(r => r.numericOtdr <= targetOtdr);
-        let afterPoints = filtered.filter(r => r.numericOtdr >= targetOtdr);
+        let filteredWithOtdr = filtered.filter(row => row.otdrMx !== "" && !isNaN(parseFloat(row.otdrMx)));
+
+        if (filteredWithOtdr.length === 0) {
+            alert('Không tìm thấy dữ liệu có OTDR phù hợp với điều kiện tra cứu!');
+            return;
+        }
+
+        filteredWithOtdr.forEach(r => r.numericOtdr = parseFloat(r.otdrMx));
+
+        let beforePoints = filteredWithOtdr.filter(r => r.numericOtdr <= targetOtdr);
+        let afterPoints = filteredWithOtdr.filter(r => r.numericOtdr >= targetOtdr);
 
         let closestPoints = [];
 
