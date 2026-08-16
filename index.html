@@ -18,7 +18,7 @@
         .input-with-btn { display: flex; gap: 5px; }
         .input-with-btn input { flex: 1; }
         .input-with-btn button { padding: 0 10px; background-color: var(--primary-color); color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; }
-        .btn-group { display: flex; gap: 10px; margin-bottom: 20px; }
+        .btn-group { display: flex; gap: 10px; margin-bottom: 20px; align-items: center; }
         button.main-btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; color: #fff; font-weight: bold; }
         .btn-add { background-color: var(--success-color); }
         .btn-search { background-color: var(--primary-color); }
@@ -27,6 +27,8 @@
         table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 10px; }
         th, td { border: 1px solid #dee2e6; padding: 8px; text-align: left; white-space: nowrap; }
         th { background-color: #ffc107; color: #000; }
+        #tableBody tr { cursor: pointer; }
+        #tableBody tr:hover { background-color: #f1f3f5; }
         .search-section { background: #f1f3f5; padding: 15px; border-radius: 6px; margin-bottom: 25px; border: 1px solid #dee2e6; }
     </style>
 </head>
@@ -37,6 +39,9 @@
     
     <!-- FORM NHẬP LIỆU -->
     <form id="cableForm">
+        <!-- Input ẩn chứa ID phục vụ cho việc Cập nhật dữ liệu -->
+        <input type="hidden" id="selectedId" value="">
+
         <div class="form-grid">
             <div class="form-group">
                 <label>1. Trạm quản lý</label>
@@ -173,6 +178,7 @@
 
         <div class="btn-group">
             <button type="button" class="main-btn btn-add" id="btnAdd" onclick="addRecord()">Nút Thêm số liệu số hóa</button>
+            <button type="button" class="main-btn" id="btnCancelEdit" style="background-color: #6c757d; display: none;" onclick="resetFormToAddNew()">🔄 Hủy / Thêm mới</button>
         </div>
     </form>
 
@@ -214,7 +220,7 @@
     <h3>Bản đồ hiển thị các điểm cập nhật (Click map hoặc kéo thả Pin để điều chỉnh tọa độ)</h3>
     <div id="map"></div>
 
-    <h3>Danh sách số liệu</h3>
+    <h3>Danh sách số liệu (Nhấp vào dòng bất kỳ để chỉnh sửa)</h3>
     <div style="overflow-x: auto;">
         <table id="dataTable">
             <thead>
@@ -246,6 +252,7 @@
         document.getElementById('thoiGian').valueAsDate = new Date();
         initMap();
         loadDataFromSheet();
+        initRowClickEvent();
         toggleIncidentFields();
     };
 
@@ -376,13 +383,12 @@
         markersLayer.clearLayers();
 
         data.forEach(row => {
-            // Hiển thị Link xem ảnh nếu có
             let imgHtml = row.chupAnh || '';
             if (imgHtml.startsWith('http')) {
-                imgHtml = `<a href="${imgHtml}" target="_blank" style="color: #0d6efd; font-weight: bold;">🔗 Xem ảnh</a>`;
+                imgHtml = `<a href="${imgHtml}" target="_blank" style="color: #0d6efd; font-weight: bold;" onclick="event.stopPropagation();">🔗 Xem ảnh</a>`;
             }
 
-            tbody.innerHTML += `<tr>
+            tbody.innerHTML += `<tr data-id="${row.id || ''}">
                 <td>${row.id || ''}</td>
                 <td>${row.tramQuanLy || ''}</td>
                 <td>${row.tenTuyenQuyDinh || ''}</td>
@@ -435,6 +441,93 @@
                 }
             }
         });
+    }
+
+    // Xử lý sự kiện click vào dòng bảng để nạp dữ liệu lên form cập nhật
+    function initRowClickEvent() {
+        document.getElementById('tableBody').addEventListener('click', function(e) {
+            const tr = e.target.closest('tr');
+            if (!tr) return;
+            const id = tr.getAttribute('data-id');
+            if (!id) return;
+
+            const record = allRecordsData.find(r => String(r.id) === String(id));
+            if (!record) return;
+
+            document.getElementById('selectedId').value = record.id || '';
+            
+            document.getElementById('tramQuanLy').value = record.tramQuanLy || '';
+            updateLinkDropdown();
+            
+            document.getElementById('link').value = record.link || '';
+            updateTuyenDropdown();
+            
+            document.getElementById('tuyenCap').value = record.tuyenCap || '';
+            updateDetails();
+
+            document.getElementById('doiTuong').value = record.doiTuong || 'MX';
+            document.getElementById('phuongThucThiCong').value = record.phuongThucThiCong || 'Chôn trực tiếp';
+            document.getElementById('otdrMx').value = record.otdrMx || '';
+            document.getElementById('doSau').value = record.doSau || '';
+            document.getElementById('layToaDo').value = record.layToaDo || '';
+            
+            if (record.layToaDo && record.layToaDo.includes(',')) {
+                const parts = record.layToaDo.split(',');
+                const lat = parseFloat(parts[0]);
+                const lng = parseFloat(parts[1]);
+                if (!isNaN(lat) && !isNaN(lng)) {
+                    setPinOnMap(lat, lng);
+                }
+            }
+
+            document.getElementById('thoiGian').value = record.thoiGian || '';
+            document.getElementById('chieuTu').value = record.chieuTu || 'Bắc-> Nam';
+            document.getElementById('dienGiai').value = record.dienGiai || '';
+            document.getElementById('km').value = record.km || '';
+            document.getElementById('m').value = record.m || '';
+            document.getElementById('taiKm').value = record.taiKm || '';
+            document.getElementById('tuyenDuong').value = record.tuyenDuong || 'QL1A';
+            document.getElementById('cachMepDuong').value = record.cachMepDuong || '';
+            
+            document.getElementById('lyDoCapNhat').value = record.lyDoCapNhat || 'Số hóa cáp quang';
+            toggleIncidentFields();
+            
+            document.getElementById('soMxPhatSinh').value = record.soMxPhatSinh || '';
+            document.getElementById('soCapPhatSinh').value = record.soCapPhatSinh || '';
+            document.getElementById('coTraoSoi').value = record.coTraoSoi || 'Không';
+
+            if (record.chupAnh) {
+                document.getElementById('imgStatus').innerText = "Đã có ảnh cũ (giữ nguyên nếu không chọn mới)";
+                document.getElementById('imgStatus').style.color = "blue";
+            } else {
+                document.getElementById('imgStatus').innerText = "Chưa có ảnh";
+                document.getElementById('imgStatus').style.color = "#666";
+            }
+
+            const btnAdd = document.getElementById('btnAdd');
+            btnAdd.innerText = `Cập nhật số liệu (ID: ${record.id})`;
+            btnAdd.style.backgroundColor = '#ff9800';
+
+            document.getElementById('btnCancelEdit').style.display = 'inline-block';
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    }
+
+    function resetFormToAddNew() {
+        document.getElementById('selectedId').value = '';
+        document.getElementById('cableForm').reset();
+        document.getElementById('thoiGian').valueAsDate = new Date();
+        document.getElementById('imgStatus').innerText = "Chưa có ảnh";
+        document.getElementById('imgStatus').style.color = "#666";
+        
+        const btnAdd = document.getElementById('btnAdd');
+        btnAdd.innerText = "Nút Thêm số liệu số hóa";
+        btnAdd.style.backgroundColor = 'var(--success-color)';
+
+        document.getElementById('btnCancelEdit').style.display = 'none';
+        updateLinkDropdown();
+        toggleIncidentFields();
     }
 
     function initDropdowns() {
@@ -625,8 +718,10 @@
         }
 
         const lyDo = document.getElementById('lyDoCapNhat').value;
+        const recordId = document.getElementById('selectedId').value;
 
         const data = {
+            id: recordId, // Truyền ID nếu đang ở chế độ cập nhật
             tramQuanLy: document.getElementById('tramQuanLy').value,
             tenTuyenQuyDinh: document.getElementById('tenTuyenQuyDinh').value,
             link: document.getElementById('link').value,
@@ -642,7 +737,7 @@
             dienGiai: document.getElementById('dienGiai').value,
             km: document.getElementById('km').value,
             m: document.getElementById('m').value,
-            chupAnh: imageName,
+            chupAnh: "", // Backend tự giữ ảnh cũ nếu không có ảnh mới
             imageBytes: imageBytes,
             imageType: imageType,
             taiKm: document.getElementById('taiKm').value,
@@ -655,7 +750,8 @@
         };
 
         const btn = document.getElementById('btnAdd');
-        btn.innerText = "Đang tải ảnh và gửi dữ liệu...";
+        const isEditing = recordId !== "";
+        btn.innerText = isEditing ? "Đang cập nhật dữ liệu..." : "Đang tải ảnh và gửi dữ liệu...";
         btn.disabled = true;
 
         try {
@@ -665,12 +761,12 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
             });
-            alert('Đã thêm số liệu và lưu ảnh thành công!');
+            alert(isEditing ? 'Đã cập nhật số liệu thành công!' : 'Đã thêm số liệu và lưu ảnh thành công!');
             location.reload();
         } catch (error) {
             alert('Lỗi: ' + error);
         } finally {
-            btn.innerText = "Nút Thêm số liệu số hóa";
+            btn.innerText = isEditing ? "Cập nhật số liệu" : "Nút Thêm số liệu số hóa";
             btn.disabled = false;
         }
     }
