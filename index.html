@@ -45,7 +45,7 @@
         <div class="form-grid">
             <div class="form-group">
                 <label>1. Trạm quản lý</label>
-                <select id="tramQuanLy" onchange="updateLinkDropdown()"></select>
+                <select id="tramQuanLy" onchange="updateLinkDropdown(); calculateOtdrMxCap();"></select>
             </div>
             <div class="form-group">
                 <label>2. Link</label>
@@ -53,7 +53,7 @@
             </div>
             <div class="form-group">
                 <label>3. Tuyến cáp</label>
-                <select id="tuyenCap" onchange="updateDetails()"></select>
+                <select id="tuyenCap" onchange="updateDetails(); calculateOtdrMxCap();"></select>
             </div>
             <div class="form-group">
                 <label>4. Tên tuyến quy định</label>
@@ -83,7 +83,7 @@
             </div>
             <div class="form-group">
                 <label>OTDR -> MX</label>
-                <input type="number" step="0.01" id="otdrMx" placeholder="53.45">
+                <input type="number" step="0.01" id="otdrMx" placeholder="53.45" oninput="calculateOtdrMxCap()">
             </div>
             <div class="form-group">
                 <label>Độ sâu/Cao cáp</label>
@@ -165,7 +165,7 @@
             </div>
             <div class="form-group" id="fieldSoCap" style="display: none;">
                 <label>Số cáp phát sinh (m)</label>
-                <input type="number" id="soCapPhatSinh" placeholder="0">
+                <input type="number" id="soCapPhatSinh" placeholder="0" oninput="calculateOtdrMxCap()">
             </div>
             <div class="form-group" id="fieldCoTraoSoi" style="display: none;">
                 <label>Có tráo sợi ?</label>
@@ -173,6 +173,11 @@
                     <option value="Không">Không</option>
                     <option value="Có">Có</option>
                 </select>
+            </div>
+            <!-- TRƯỜNG MỚI: OTDR ->MX _cáp (Chỉ hiển thị khi chọn Sự cố cáp quang) -->
+            <div class="form-group" id="fieldOtdrMxCap" style="display: none;">
+                <label>OTDR ->MX _cáp (Tự động)</label>
+                <input type="number" step="0.0001" id="otdrMxCap" readonly style="background-color: #e9ecef;" placeholder="Tự động tính theo công thức">
             </div>
         </div>
 
@@ -225,7 +230,7 @@
         <table id="dataTable">
             <thead>
                 <tr>
-                    <th>ID</th><th>Trạm quản lý</th><th>Tên tuyến quy định</th><th>Link</th><th>Tuyến cáp</th><th>Chiều dài Link</th><th>Đối tượng</th><th>Phương thức thi công</th><th>OTDR->MX</th><th>Độ sâu/Cao</th><th>Lấy tọa độ</th><th>Thời gian</th><th>Chiều từ</th><th>Diễn giải</th><th>Km</th><th>M</th><th>Chụp ảnh</th><th>Tại Km</th><th>Tuyến đường</th><th>Cách mép đường(m)</th><th>Lý do cập nhật</th><th>Số MX phát sinh</th><th>Số cáp phát sinh</th><th>Có tráo sợi ?</th>
+                    <th>ID</th><th>Trạm quản lý</th><th>Tên tuyến quy định</th><th>Link</th><th>Tuyến cáp</th><th>Chiều dài Link</th><th>Đối tượng</th><th>Phương thức thi công</th><th>OTDR->MX</th><th>Độ sâu/Cao</th><th>Lấy tọa độ</th><th>Thời gian</th><th>Chiều từ</th><th>Diễn giải</th><th>Km</th><th>M</th><th>Chụp ảnh</th><th>Tại Km</th><th>Tuyến đường</th><th>Cách mép đường(m)</th><th>Lý do cập nhật</th><th>Số MX phát sinh</th><th>Số cáp phát sinh</th><th>Có tráo sợi ?</th><th>OTDR->MX _cáp</th>
                 </tr>
             </thead>
             <tbody id="tableBody"></tbody>
@@ -261,16 +266,54 @@
         const fieldSoMx = document.getElementById('fieldSoMx');
         const fieldSoCap = document.getElementById('fieldSoCap');
         const fieldCoTraoSoi = document.getElementById('fieldCoTraoSoi');
+        const fieldOtdrMxCap = document.getElementById('fieldOtdrMxCap');
 
         if (lyDo === 'Sự cố cáp quang') {
             fieldSoMx.style.display = 'flex';
             fieldSoCap.style.display = 'flex';
             fieldCoTraoSoi.style.display = 'flex';
+            fieldOtdrMxCap.style.display = 'flex';
         } else {
             fieldSoMx.style.display = 'none';
             fieldSoCap.style.display = 'none';
             fieldCoTraoSoi.style.display = 'none';
+            fieldOtdrMxCap.style.display = 'none';
         }
+        calculateOtdrMxCap();
+    }
+
+    // Hàm tính toán trường OTDR ->MX _cáp trực tiếp trên giao diện tương ứng công thức AppSheet
+    function calculateOtdrMxCap() {
+        const lyDo = document.getElementById('lyDoCapNhat').value;
+        if (lyDo !== 'Sự cố cáp quang') {
+            document.getElementById('otdrMxCap').value = '';
+            return;
+        }
+
+        const tram = document.getElementById('tramQuanLy').value;
+        const tuyen = document.getElementById('tuyenCap').value;
+        const currentOtdr = parseFloat(document.getElementById('otdrMx').value);
+        const currentId = document.getElementById('selectedId').value;
+
+        if (isNaN(currentOtdr)) {
+            document.getElementById('otdrMxCap').value = '';
+            return;
+        }
+
+        let sumMcp = 0;
+        allRecordsData.forEach(r => {
+            if (r.tramQuanLy === tram && r.tuyenCap === tuyen) {
+                const rOtdr = parseFloat(r.otdrMx);
+                if (!isNaN(rOtdr) && rOtdr < currentOtdr) {
+                    if (!currentId || String(r.id) !== String(currentId)) {
+                        sumMcp += parseFloat(r.soCapPhatSinh) || 0;
+                    }
+                }
+            }
+        });
+
+        const result = currentOtdr + (sumMcp * 1.467700 / 1000);
+        document.getElementById('otdrMxCap').value = result.toFixed(4);
     }
 
     function initMap() {
@@ -413,6 +456,7 @@
                 <td>${row.soMxPhatSinh || ''}</td>
                 <td>${row.soCapPhatSinh || ''}</td>
                 <td>${row.coTraoSoi || ''}</td>
+                <td>${row.otdrMxCap || ''}</td>
             </tr>`;
 
             if (row.layToaDo && row.layToaDo.includes(',')) {
@@ -424,6 +468,9 @@
                     const labelText = `${row.tuyenCap || ''} - ${row.doiTuong || 'MX'}/${row.taiKm || ''} (OTDR: ${row.otdrMx || 0})`;
                     
                     let popupContent = `<b>Tuyến: ${row.tuyenCap}</b><br>OTDR->MX: ${row.otdrMx || ''}<br>Trạm: ${row.tramQuanLy}<br>Diễn giải: ${row.dienGiai || ''}`;
+                    if (row.otdrMxCap) {
+                        popupContent += `<br>OTDR->MX _cáp: ${row.otdrMxCap}`;
+                    }
                     if (row.chupAnh && row.chupAnh.startsWith('http')) {
                         popupContent += `<br><a href="${row.chupAnh}" target="_blank"><img src="${row.chupAnh}" width="120" style="margin-top:5px;border-radius:4px;display:block;"></a>`;
                     }
@@ -495,6 +542,7 @@
             document.getElementById('soMxPhatSinh').value = record.soMxPhatSinh || '';
             document.getElementById('soCapPhatSinh').value = record.soCapPhatSinh || '';
             document.getElementById('coTraoSoi').value = record.coTraoSoi || 'Không';
+            document.getElementById('otdrMxCap').value = record.otdrMxCap || '';
 
             if (record.chupAnh) {
                 document.getElementById('imgStatus').innerText = "Đã có ảnh cũ (giữ nguyên nếu không chọn mới)";
@@ -746,7 +794,8 @@
             lyDoCapNhat: lyDo,
             soMxPhatSinh: lyDo === 'Sự cố cáp quang' ? document.getElementById('soMxPhatSinh').value : '',
             soCapPhatSinh: lyDo === 'Sự cố cáp quang' ? document.getElementById('soCapPhatSinh').value : '',
-            coTraoSoi: lyDo === 'Sự cố cáp quang' ? document.getElementById('coTraoSoi').value : ''
+            coTraoSoi: lyDo === 'Sự cố cáp quang' ? document.getElementById('coTraoSoi').value : '',
+            otdrMxCap: lyDo === 'Sự cố cáp quang' ? document.getElementById('otdrMxCap').value : ''
         };
 
         const btn = document.getElementById('btnAdd');
