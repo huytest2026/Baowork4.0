@@ -376,6 +376,12 @@
         markersLayer.clearLayers();
 
         data.forEach(row => {
+            // Hiển thị Link xem ảnh nếu có
+            let imgHtml = row.chupAnh || '';
+            if (imgHtml.startsWith('http')) {
+                imgHtml = `<a href="${imgHtml}" target="_blank" style="color: #0d6efd; font-weight: bold;">🔗 Xem ảnh</a>`;
+            }
+
             tbody.innerHTML += `<tr>
                 <td>${row.id || ''}</td>
                 <td>${row.tramQuanLy || ''}</td>
@@ -393,7 +399,7 @@
                 <td>${row.dienGiai || ''}</td>
                 <td>${row.km || ''}</td>
                 <td>${row.m || ''}</td>
-                <td>${row.chupAnh || ''}</td>
+                <td>${imgHtml}</td>
                 <td>${row.taiKm || ''}</td>
                 <td>${row.tuyenDuong || ''}</td>
                 <td>${row.cachMepDuong || ''}</td>
@@ -411,6 +417,11 @@
                     const color = getMarkerColor(row.tuyenCap);
                     const labelText = `${row.tuyenCap || ''} - ${row.doiTuong || 'MX'}/${row.taiKm || ''} (OTDR: ${row.otdrMx || 0})`;
                     
+                    let popupContent = `<b>Tuyến: ${row.tuyenCap}</b><br>OTDR->MX: ${row.otdrMx || ''}<br>Trạm: ${row.tramQuanLy}<br>Diễn giải: ${row.dienGiai || ''}`;
+                    if (row.chupAnh && row.chupAnh.startsWith('http')) {
+                        popupContent += `<br><a href="${row.chupAnh}" target="_blank"><img src="${row.chupAnh}" width="120" style="margin-top:5px;border-radius:4px;display:block;"></a>`;
+                    }
+
                     L.circleMarker([lat, lng], {
                         radius: 8,
                         fillColor: color,
@@ -420,7 +431,7 @@
                         fillOpacity: 0.9
                     }).addTo(markersLayer)
                       .bindTooltip(labelText, { permanent: true, direction: 'top' })
-                      .bindPopup(`<b>Tuyến: ${row.tuyenCap}</b><br>OTDR->MX: ${row.otdrMx || ''}<br>Trạm: ${row.tramQuanLy}<br>Diễn giải: ${row.dienGiai || ''}`);
+                      .bindPopup(popupContent);
                 }
             }
         });
@@ -510,7 +521,6 @@
             return matchLink && matchTuyen && matchLyDo;
         });
 
-        // Nếu chọn "Số hóa cáp quang" HOẶC không nhập OTDR (đối với Sự cố cáp quang hoặc tất cả lý do)
         if (searchLyDo === 'Số hóa cáp quang' || targetOtdrVal === '') {
             if (filtered.length === 0) {
                 alert('Không tìm thấy dữ liệu phù hợp với điều kiện tra cứu!');
@@ -521,7 +531,6 @@
             return;
         }
 
-        // Trường hợp "Sự cố cáp quang" VÀ CÓ NHẬP OTDR
         const targetOtdr = parseFloat(targetOtdrVal);
         if (isNaN(targetOtdr)) {
             alert('Vui lòng nhập khoảng cách đo OTDR (km) hợp lệ để tìm kiếm!');
@@ -574,7 +583,7 @@
 
     function previewImage(input) {
         if (input.files && input.files[0]) {
-            document.getElementById('imgStatus').innerText = "Đã chụp: " + input.files[0].name;
+            document.getElementById('imgStatus').innerText = "Đã chọn: " + input.files[0].name;
             document.getElementById('imgStatus').style.color = "green";
         }
     }
@@ -589,9 +598,31 @@
         }
     }
 
+    function readFileAsBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+            reader.readAsDataURL(file);
+        });
+    }
+
     async function addRecord() {
         const fileInput = document.getElementById('chupAnh');
-        let fotoName = fileInput.files.length > 0 ? fileInput.files[0].name : "";
+        let imageName = "";
+        let imageBytes = "";
+        let imageType = "";
+
+        if (fileInput.files.length > 0) {
+            const file = fileInput.files[0];
+            imageName = file.name;
+            imageType = file.type;
+            try {
+                imageBytes = await readFileAsBase64(file);
+            } catch (err) {
+                console.log("Lỗi đọc file ảnh: ", err);
+            }
+        }
 
         const lyDo = document.getElementById('lyDoCapNhat').value;
 
@@ -611,7 +642,9 @@
             dienGiai: document.getElementById('dienGiai').value,
             km: document.getElementById('km').value,
             m: document.getElementById('m').value,
-            chupAnh: fotoName,
+            chupAnh: imageName,
+            imageBytes: imageBytes,
+            imageType: imageType,
             taiKm: document.getElementById('taiKm').value,
             tuyenDuong: document.getElementById('tuyenDuong').value,
             cachMepDuong: document.getElementById('cachMepDuong').value,
@@ -622,7 +655,7 @@
         };
 
         const btn = document.getElementById('btnAdd');
-        btn.innerText = "Đang gửi...";
+        btn.innerText = "Đang tải ảnh và gửi dữ liệu...";
         btn.disabled = true;
 
         try {
@@ -632,7 +665,7 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(data)
             });
-            alert('Đã thêm số liệu thành công!');
+            alert('Đã thêm số liệu và lưu ảnh thành công!');
             location.reload();
         } catch (error) {
             alert('Lỗi: ' + error);
