@@ -6,7 +6,7 @@
     <title>Quản lý số hóa và sự cố tuyến cáp</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-        :root { --success-color: #198754; --warning-color: #ffc107; --primary-color: #0d6efd; --focus-color: #fd7e14; }
+        :root { --success-color: #198754; --warning-color: #ffc107; --primary-color: #0d6efd; }
         body { font-family: Arial, sans-serif; background-color: #f8f9fa; padding: 20px; }
         .container { max-width: 1400px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         h2, h3 { color: #333; border-bottom: 2px solid #ffc107; padding-bottom: 8px; margin-top: 20px; }
@@ -16,7 +16,7 @@
         .form-group input, .form-group select { padding: 8px; border: 1px solid #ced4da; border-radius: 4px; font-size: 14px; }
         .input-with-btn { display: flex; gap: 5px; }
         .input-with-btn input { flex: 1; }
-        .input-with-btn button { padding: 0 10px; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; }
+        .input-with-btn button { padding: 0 10px; background-color: var(--primary-color); color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; }
         .btn-group { display: flex; gap: 10px; margin-bottom: 20px; align-items: center; }
         button.main-btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; color: #fff; font-weight: bold; }
         .btn-add { background-color: var(--success-color); }
@@ -90,8 +90,7 @@
                 <label>Lấy tọa độ (Click map hoặc GPS)</label>
                 <div class="input-with-btn">
                     <input type="text" id="layToaDo" placeholder="16.4802,107.6233" oninput="calculateOtdrMxCap()">
-                    <button type="button" onclick="getLocation()" style="background-color: var(--primary-color);" title="Định vị GPS thực tế">📍 GPS</button>
-                    <button type="button" onclick="focusMap()" style="background-color: var(--focus-color);" title="Focus bản đồ về tọa độ hiện tại">🎯 Focus</button>
+                    <button type="button" onclick="getLocation()" title="Định vị GPS thực tế">📍 GPS</button>
                 </div>
             </div>
             <div class="form-group">
@@ -275,6 +274,7 @@
         calculateOtdrMxCap();
     }
 
+    // TÍNH TOÁN OTDR ->MX _cáp TRÊN FRONTEND VỚI LOGIC SẮP XẾP TỪ BẮC VÀO NAM & ĐỒNG BỘ KM
     function calculateOtdrMxCap() {
         const lyDo = document.getElementById('lyDoCapNhat').value;
         if (lyDo !== 'Sự cố cáp quang') {
@@ -292,6 +292,7 @@
             return;
         }
 
+        // Chuẩn bị danh sách bản ghi thuộc tuyến
         let routeRows = allRecordsData.map(r => {
             let lat = 0;
             if (r.layToaDo && r.layToaDo.includes(',')) {
@@ -310,6 +311,7 @@
             };
         });
 
+        // Bổ sung dữ liệu đang nhập trên form nếu chưa có hoặc đang cập nhật
         const formLatStr = document.getElementById('layToaDo').value;
         let formLat = 0;
         if (formLatStr && formLatStr.includes(',')) {
@@ -318,6 +320,7 @@
 
         let filteredRoute = routeRows.filter(r => r.tramQuanLy === tram && r.tuyenCap === tuyen);
         
+        // Đảm bảo cập nhật bản ghi hiện tại đang gõ vào mảng tạm để tính chính xác
         if (currentId) {
             let index = filteredRoute.findIndex(r => String(r.id) === String(currentId));
             if (index >= 0) {
@@ -329,6 +332,7 @@
             }
         }
 
+        // SẮP XẾP CHUẨN TỪ BẮC VÀO NAM (Vĩ độ giảm dần, đồng bộ kết hợp Km/M và OTDR)
         filteredRoute.sort((a, b) => {
             if (a.lat !== 0 && b.lat !== 0 && Math.abs(a.lat - b.lat) > 0.0001) {
                 return b.lat - a.lat; 
@@ -387,7 +391,7 @@
 
             if (!currentMarker) {
                 currentMarker = L.marker(e.latlng, { draggable: true }).addTo(map)
-                    .bindPopup("Pin điều chỉnh tọa độ (Kéo thả để chọn chính xác)");
+                    .bindPopup("Pin điều chỉnh tọa độ (Kéo thả để chọn chính xác)").openPopup();
                 
                 currentMarker.on('dragstart', function() { isUserDragging = true; });
                 currentMarker.on('dragend', function(event) {
@@ -409,36 +413,14 @@
             const lat = e.latlng.lat.toFixed(6);
             const lng = e.latlng.lng.toFixed(6);
             document.getElementById('layToaDo').value = `${lat},${lng}`;
-            setPinOnMap(lat, lng, false); // Không ép dịch chuyển map ngầm
+            setPinOnMap(lat, lng);
             calculateOtdrMxCap();
         });
 
-        // Chỉ định vị GPS ngầm dạng watch, tắt setView tự động để người dùng tự do kéo map
-        if (navigator.geolocation) {
-            map.locate({ setView: false, maxZoom: 18, watch: true, enableHighAccuracy: true });
-        }
+        getLocation();
     }
 
-    // Hàm Focus thủ công khi người dùng bấm nút 🎯 Focus
-    function focusMap() {
-        const val = document.getElementById('layToaDo').value;
-        if (val && val.includes(',')) {
-            const parts = val.split(',');
-            const lat = parseFloat(parts[0]);
-            const lng = parseFloat(parts[1]);
-            if (!isNaN(lat) && !isNaN(lng)) {
-                map.setView([lat, lng], 16);
-                setPinOnMap(lat, lng, false);
-            }
-        } else if (liveLocationMarker) {
-            const latlng = liveLocationMarker.getLatLng();
-            map.setView(latlng, 16);
-        } else {
-            alert('Chưa có tọa độ hoặc vị trí GPS để focus!');
-        }
-    }
-
-    function setPinOnMap(lat, lng, doZoom = false) {
+    function setPinOnMap(lat, lng) {
         if (currentMarker) {
             currentMarker.setLatLng([lat, lng]);
         } else {
@@ -451,22 +433,12 @@
                 calculateOtdrMxCap();
             });
         }
-        if (doZoom) {
-            map.setView([lat, lng], map.getZoom());
-        }
+        map.setView([lat, lng], map.getZoom());
     }
 
     function getLocation() {
         if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(function(position) {
-                const lat = position.coords.latitude.toFixed(6);
-                const lng = position.coords.longitude.toFixed(6);
-                document.getElementById('layToaDo').value = `${lat},${lng}`;
-                setPinOnMap(lat, lng, true); // Lấy GPS thủ công thì có thể focus thẳng tới vị trí
-                calculateOtdrMxCap();
-            }, function(e) {
-                alert("Không thể lấy vị trí GPS: " + e.message);
-            }, { enableHighAccuracy: true });
+            map.locate({ setView: true, maxZoom: 18, watch: true, enableHighAccuracy: true });
         }
     }
 
@@ -597,7 +569,7 @@
                 const lat = parseFloat(parts[0]);
                 const lng = parseFloat(parts[1]);
                 if (!isNaN(lat) && !isNaN(lng)) {
-                    setPinOnMap(lat, lng, false); // Chỉ cập nhật vị trí pin, KHÔNG ép dịch chuyển map để tránh mất vùng đang thao tác
+                    setPinOnMap(lat, lng);
                 }
             }
 
@@ -897,4 +869,4 @@
     }
 </script>
 </body>
-</html>[cite: 7]
+</html>
